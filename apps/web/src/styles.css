@@ -89,6 +89,9 @@ body,
 
 .topbar {
   display: flex;
+  position: sticky;
+  top: 8px;
+  z-index: 50;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
@@ -97,6 +100,7 @@ body,
   border-radius: 18px;
   padding: 18px 26px;
   box-shadow: 0 3px 18px rgba(15, 29, 43, 0.02);
+  backdrop-filter: blur(18px);
 }
 
 .brand-wrap {
@@ -117,7 +121,7 @@ body,
 
 .brand-logo-img {
   display: block;
-  width: 100%;
+  width: 78%;
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 10px 20px rgba(19, 87, 227, 0.22));
@@ -170,6 +174,11 @@ body,
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.mobile-menu-toggle,
+.mobile-menu {
+  display: none;
 }
 
 .btn {
@@ -323,6 +332,13 @@ body,
   color: var(--white);
   border: 3px solid var(--bg);
   margin-left: -8px;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatar:first-child {
@@ -389,7 +405,7 @@ body,
 .hero-photo-wrap {
   position: relative;
   z-index: 1;
-  width: 78%;
+  width: 100%;
   aspect-ratio: 1;
   border-radius: 50%;
   overflow: hidden;
@@ -441,6 +457,13 @@ body,
   flex-shrink: 0;
 }
 
+.hero-course-cap {
+  width: 24px;
+  height: 24px;
+  color: var(--primary);
+  stroke-width: 2.4;
+}
+
 .hero-badge-courses {
   top: 8%;
   right: -6%;
@@ -476,11 +499,20 @@ body,
 .mini-avatar-b { background: linear-gradient(135deg, #f7b267, #f38a4e); }
 .mini-avatar-c { background: linear-gradient(135deg, #44b7a1, #4dc4bf); }
 
+.feature-section-card {
+  margin-top: 28px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  background: color-mix(in srgb, var(--card) 88%, var(--primary-soft));
+  box-shadow: 0 18px 42px var(--shadow);
+}
+
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
-  margin-top: 18px;
+  margin-top: 0;
 }
 
 .feature-card {
@@ -628,9 +660,38 @@ body,
 }
 
 .course-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
   gap: 22px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding: 4px 2px 18px;
+}
+
+.course-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.course-carousel-shell {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 10px;
+}
+
+.course-carousel-btn {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--primary);
+  box-shadow: 0 8px 20px var(--shadow);
+  font: inherit;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .course-card {
@@ -642,6 +703,8 @@ body,
   overflow: hidden;
   padding: 16px 16px 18px;
   box-shadow: 0 12px 30px var(--shadow);
+  flex: 0 0 calc((100% - 66px) / 4);
+  scroll-snap-align: start;
 }
 
 .course-image {
@@ -795,6 +858,12 @@ body,
   font-size: 1.5rem;
 }
 
+.cta-brand svg {
+  width: 30px;
+  height: 30px;
+  stroke-width: 2.4;
+}
+
 .cta-icon {
   display: inline-grid;
   place-items: center;
@@ -836,6 +905,9 @@ body,
   margin-top: 34px;
   background: #0b1220;
   border-radius: 22px 22px 0 0;
+  border: 1px solid rgba(80, 139, 255, 0.3);
+  border-bottom: 0;
+  box-shadow: 0 20px 50px rgba(3, 10, 24, 0.28);
 }
 
 .footer-brand-block {
@@ -925,7 +997,7 @@ body,
   }
 
   .hero-section {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1.02fr 1fr;
   }
 
   .hero-copy {
@@ -936,12 +1008,12 @@ body,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .course-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .course-card {
+    flex-basis: calc((100% - 22px) / 2);
   }
 
   .steps-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .site-footer {
@@ -953,63 +1025,671 @@ body,
   }
 }
 
+/* Focused authentication density correction: keep the existing composition,
+   while fitting routine sign-in/sign-up work inside common viewports. */
+.auth-page {
+  min-height: 100dvh;
+  justify-content: center;
+  padding: 12px 16px;
+}
+
+.auth-shell {
+  max-height: calc(100dvh - 24px);
+}
+
+.auth-side {
+  padding: 24px;
+  gap: 10px;
+}
+
+.auth-side h1 {
+  margin-top: 4px;
+  font-size: 1.65rem;
+  line-height: 1.2;
+}
+
+.auth-feature-list {
+  margin-top: 4px;
+  gap: 10px;
+}
+
+.auth-feature-icon {
+  width: 34px;
+  height: 34px;
+}
+
+.auth-main form {
+  padding: 24px 30px 26px;
+}
+
+.login-form h2,
+.create-form h2 {
+  margin-bottom: 4px;
+  font-size: 1.55rem;
+  line-height: 1.2;
+}
+
+.login-form > p,
+.create-form > p {
+  margin-bottom: 12px;
+  font-size: 0.86rem;
+  line-height: 1.3;
+}
+
+.auth-page .field {
+  margin: 9px 0;
+}
+
+.auth-page .field span,
+.auth-page .field-label-standalone {
+  margin-bottom: 4px;
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.auth-page .field input,
+.auth-page .field select {
+  min-height: 46px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.auth-page .btn {
+  min-height: 44px;
+  font-size: 0.9rem;
+}
+
+.auth-page .form-actions {
+  margin: 5px 0 8px;
+  font-size: 0.78rem;
+}
+
+.auth-page .role-options {
+  margin-bottom: 8px;
+}
+
+.auth-page .role {
+  min-height: 58px;
+  padding: 7px 8px;
+  gap: 4px;
+  font-size: 0.78rem;
+}
+
+.auth-page .password-criteria {
+  gap: 4px 8px;
+  margin-bottom: 7px;
+}
+
+.auth-page .password-strength {
+  gap: 4px;
+  margin-bottom: 7px;
+}
+
+.auth-page .or-row {
+  margin: 9px 0;
+  font-size: 0.78rem;
+}
+
+.auth-page .auth-switch,
+.auth-page .auth-disclaimer {
+  margin-top: 9px;
+}
+
+@media (max-height: 760px) and (min-width: 681px) {
+  .auth-illustration {
+    display: none;
+  }
+
+  .auth-side-footer {
+    padding-top: 6px;
+  }
+}
+
+@media (max-width: 680px) {
+  .auth-page {
+    justify-content: flex-start;
+    padding: 6px;
+  }
+
+  .auth-shell {
+    max-height: calc(100dvh - 12px);
+  }
+
+  .auth-main form,
+  .verify-form {
+    padding: 14px 16px 16px;
+  }
+
+  .login-form h2,
+  .create-form h2 {
+    font-size: 1.25rem;
+  }
+
+  .auth-page .field {
+    margin: 6px 0;
+  }
+
+  .auth-page .field input,
+  .auth-page .field select,
+  .auth-page .btn {
+    min-height: 44px;
+  }
+
+  .auth-page .auth-switch,
+  .auth-page .auth-disclaimer {
+    margin-top: 7px;
+    font-size: 0.7rem;
+    line-height: 1.2;
+  }
+
+  .auth-page .or-row {
+    margin: 7px 0;
+  }
+}
+
+@media (min-width: 681px) and (max-width: 1120px) {
+  .hero-photo-wrap {
+    width: 100%;
+  }
+}
+
 @media (max-width: 680px) {
   .mentora-page {
-    padding-inline: 14px;
+    padding: 8px 8px 0;
   }
 
   .topbar {
-    padding: 16px 18px;
+    top: 4px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 14px;
   }
 
   .brand-name {
-    font-size: 1.7rem;
+    font-size: 1.3rem;
   }
 
-  .main-nav {
-    gap: 18px;
+  .brand-wrap {
+    min-width: 0;
+    gap: 7px;
+  }
+
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .main-nav,
+  .desktop-auth-action {
+    display: none;
   }
 
   .auth-actions {
-    width: 100%;
+    position: absolute;
+    top: 9px;
+    right: 12px;
+    width: auto;
+    margin-left: auto;
     justify-content: flex-end;
+    gap: 7px;
   }
 
-  .cta-row,
-  .social-proof {
-    flex-direction: column;
-    align-items: flex-start;
+  .theme-toggle {
+    width: 34px;
+    height: 34px;
   }
 
-  .feature-grid,
-  .course-grid,
-  .steps-grid,
-  .site-footer {
-    grid-template-columns: 1fr;
+  .mobile-menu-toggle {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-content: center;
+    gap: 4px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+    cursor: pointer;
   }
 
-  .cta-panel {
-    flex-direction: column;
-    align-items: flex-start;
+  .mobile-menu-toggle span {
+    display: block;
+    width: 16px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--text);
+  }
+
+  .mobile-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(220px, calc(100vw - 16px));
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--card);
+    box-shadow: 0 18px 40px var(--shadow);
+  }
+
+  .mobile-menu a {
+    padding: 11px 12px;
+    border-radius: 9px;
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .mobile-menu a:first-child {
+    background: var(--primary);
+    color: var(--white);
+  }
+
+  .landing-content {
+    padding-top: 12px;
+  }
+
+  .hero-section {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    gap: 4px;
+    padding: 8px 0 4px;
+  }
+
+  .hero-copy {
+    min-width: 0;
+    padding: 0;
   }
 
   .hero-copy h1 {
-    font-size: 3rem;
+    font-size: clamp(1.4rem, 7.4vw, 2rem);
+    line-height: 0.98;
+    letter-spacing: -0.07em;
+  }
+
+  .hero-copy p {
+    margin: 9px 0 10px;
+    font-size: clamp(0.58rem, 2.5vw, 0.72rem);
+    line-height: 1.45;
+  }
+
+  .cta-row {
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+
+  .btn.large {
+    min-width: 0;
+    padding: 7px 8px;
+    gap: 4px;
+    border-radius: 8px;
+    font-size: clamp(0.52rem, 2.25vw, 0.66rem);
+    white-space: nowrap;
+  }
+
+  .play-badge {
+    width: 14px;
+    height: 14px;
+    font-size: 0.48rem;
+  }
+
+  .social-proof {
+    gap: 5px;
+    position: relative;
+    padding-bottom: 16px;
+  }
+
+  .avatar-stack {
+    padding-left: 3px;
+  }
+
+  .avatar {
+    width: 24px;
+    height: 24px;
+    margin-left: -5px;
+    border-width: 2px;
+    font-size: 0.52rem;
+  }
+
+  .proof-copy {
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .stars {
+    font-size: 0.52rem;
+  }
+
+  .proof-copy p {
+    font-size: 0.58rem;
+  }
+
+  .proof-copy span {
+    font-size: 0.5rem;
+    line-height: 1.25;
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    white-space: nowrap;
   }
 
   .hero-visual {
-    display: block;
-    min-height: auto;
-    padding: 8px 0 28px;
+    display: flex;
+    min-width: 0;
+    min-height: 230px;
+    padding: 0;
   }
 
   .hero-ring {
-    width: min(320px, 84%);
+    width: 130px;
+    max-width: 100%;
     margin: 0 auto;
   }
 
   .hero-badge {
-    display: none;
+    display: flex;
+    gap: 4px;
+    padding: 5px 6px;
+    border-radius: 8px;
+    box-shadow: 0 8px 18px var(--shadow);
+  }
+
+  .hero-badge strong {
+    font-size: 0.52rem;
+  }
+
+  .hero-badge span {
+    font-size: 0.43rem;
+  }
+
+  .hero-badge-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .hero-course-cap {
+    width: 17px;
+    height: 17px;
+  }
+
+  .hero-badge-courses {
+    top: 5%;
+    right: -1%;
+  }
+
+  .hero-badge-classes {
+    bottom: 18%;
+    left: -5%;
+  }
+
+  .hero-badge-certificates {
+    bottom: 3%;
+    right: 0;
+  }
+
+  .mini-avatar {
+    width: 13px;
+    height: 13px;
+    margin-left: -5px;
+    border-width: 1px;
+  }
+
+  .feature-section-card {
+    margin-top: 12px;
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .feature-card {
+    min-height: 116px;
+    padding: 11px 9px;
+    border-radius: 12px;
+  }
+
+  .feature-icon {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    transform: scale(0.78);
+    transform-origin: left top;
+  }
+
+  .feature-card h3 {
+    margin-bottom: 4px;
+    font-size: 0.76rem;
+  }
+
+  .feature-card p {
+    font-size: 0.62rem;
+    line-height: 1.35;
+  }
+
+  .courses-section,
+  .steps-section {
+    margin-top: 24px;
+  }
+
+  .section-heading {
+    margin-bottom: 10px;
+  }
+
+  .section-heading h2,
+  .steps-section h2 {
+    font-size: 1.35rem;
+  }
+
+  .section-heading a {
+    font-size: 0.68rem;
+  }
+
+  .course-carousel-shell {
+    grid-template-columns: 28px minmax(0, 1fr) 28px;
+    gap: 5px;
+  }
+
+  .course-carousel-btn {
+    width: 28px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 1.3rem;
+  }
+
+  .course-grid {
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+
+  .course-card {
+    flex-basis: 78%;
+    padding: 9px 9px 11px;
+    border-radius: 15px;
+  }
+
+  .course-image {
+    border-radius: 10px;
+  }
+
+  .course-card h3 {
+    margin: 9px 2px 6px;
+    font-size: 0.78rem;
+  }
+
+  .rating-row {
+    gap: 4px;
+    margin: 0 2px;
+    font-size: 0.62rem;
+  }
+
+  .level-pill {
+    padding: 3px 5px;
+    font-size: 0.5rem;
+  }
+
+  .steps-section {
+    padding-top: 8px;
+  }
+
+  .steps-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .steps-grid::before {
+    left: 9%;
+    right: 9%;
+    top: 24px;
+  }
+
+  .step-card {
+    min-width: 0;
+    padding: 4px 2px;
+  }
+
+  .step-index {
+    width: 18px;
+    height: 18px;
+    margin-bottom: 5px;
+    font-size: 0.55rem;
+  }
+
+  .step-icon {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+  }
+
+  .step-card h3 {
+    margin-bottom: 4px;
+    font-size: 0.62rem;
+  }
+
+  .step-card p {
+    font-size: 0.48rem;
+    line-height: 1.25;
+  }
+
+  .cta-panel {
+    margin-top: 24px;
+    padding: 12px;
+    gap: 8px;
+    border-radius: 14px;
+  }
+
+  .cta-brand {
+    width: 32px;
+    height: 32px;
+  }
+
+  .cta-brand svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cta-copy h2 {
+    font-size: 0.9rem;
+  }
+
+  .cta-copy p {
+    margin-top: 3px;
+    font-size: 0.58rem;
+  }
+
+  .btn.light {
+    min-width: auto;
+    padding: 7px 8px;
+    font-size: 0.58rem;
+    white-space: nowrap;
+  }
+
+  .site-footer {
+    width: 100%;
+    box-sizing: border-box;
+    grid-template-columns: minmax(66px, 1.15fr) repeat(4, minmax(0, 1fr));
+    align-items: start;
+    gap: 6px;
+    padding: 16px 7px 18px;
+    margin-top: 24px;
+    border-radius: 14px 14px 0 0;
+    overflow: hidden;
+  }
+
+  .footer-brand-block {
+    grid-column: auto;
+    min-width: 0;
+    padding-right: 0;
+  }
+
+  .footer-brand-wrap {
+    gap: 4px;
+    min-width: 0;
+    margin-bottom: 6px;
+  }
+
+  .footer-brand-wrap .brand-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .site-footer .brand-name {
+    font-size: 0.68rem;
+  }
+
+  .footer-brand-block p {
+    max-width: none;
+    font-size: 0.48rem;
+    line-height: 1.3;
+  }
+
+  .social-row {
+    gap: 2px;
+    margin-top: 7px;
+  }
+
+  .social-row span {
+    width: 15px;
+    height: 15px;
+    font-size: 0.4rem;
+  }
+
+  .footer-column {
+    min-width: 0;
+  }
+
+  .footer-column h4 {
+    margin-bottom: 6px;
+    font-size: 0.58rem;
+    line-height: 1.15;
+  }
+
+  .footer-column ul {
+    gap: 5px;
+  }
+
+  .footer-column a,
+  .footer-column span {
+    display: block;
+    overflow-wrap: anywhere;
+    font-size: 0.5rem;
+    line-height: 1.25;
+  }
+
+  .copyright {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 16px max(18px, env(safe-area-inset-bottom));
+    border-radius: 0 0 14px 14px;
+    font-size: 0.68rem;
   }
 
   /* Auth page responsive tweaks */
@@ -11449,5 +12129,673 @@ img.settings-account-avatar,span.settings-account-avatar { width:116px; height:1
     top: 70px;
     height: calc(100vh - 70px);
     height: calc(100dvh - 70px);
+  }
+}
+
+/* ================= Application visual normalization =================
+   Amana is used only as a proportional reference. These selectors are
+   deliberately scoped away from the public landing page. */
+
+:where(.auth-page, .dash-layout, .tutor-shell, .tdash-layout, .tutor-onb-page,
+  .student-layout, .student-login-page, .student-settings-page, .admin-app) {
+  --app-card-radius: 18px;
+  --app-form-radius: 26px;
+  --app-control-radius: 11px;
+  --app-card-shadow: 0 10px 28px rgba(20, 45, 90, 0.07);
+}
+
+/* Authentication and access forms */
+.auth-shell {
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  max-width: 940px;
+  border-radius: var(--app-form-radius);
+  box-shadow: 0 18px 48px rgba(20, 45, 90, 0.1);
+}
+
+.auth-main form {
+  max-width: 500px;
+  padding: 42px 44px 46px;
+}
+
+.login-form h2,
+.create-form h2 {
+  font-size: clamp(1.75rem, 3vw, 2rem);
+  line-height: 1.2;
+}
+
+.auth-page .field input,
+.auth-page .field select {
+  min-height: 58px;
+  padding: 14px 16px;
+  border-radius: var(--app-control-radius);
+}
+
+.auth-page .input-icon-wrap input {
+  padding-left: 48px;
+}
+
+.auth-page .btn {
+  min-height: 54px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 1rem;
+}
+
+.auth-page .role {
+  min-height: 86px;
+  border-radius: 12px;
+}
+
+.student-login-page > form {
+  width: min(520px, calc(100% - 48px));
+  max-width: calc(100% - 48px);
+  padding: 42px;
+  border: 1px solid #e3e8f0;
+  border-radius: var(--app-form-radius);
+  background: #fff;
+  box-shadow: 0 16px 42px rgba(20, 45, 90, 0.09);
+}
+
+.student-login-page form > h1 {
+  font-size: clamp(1.75rem, 3vw, 2rem);
+}
+
+.student-login-page form label > div {
+  min-height: 58px;
+  padding: 0 16px;
+  border-radius: var(--app-control-radius);
+}
+
+.student-login-page form > .btn {
+  min-height: 54px;
+  border-radius: 12px;
+  font-size: 1rem;
+}
+
+/* Parent, tutor, student, and admin workspace rhythm */
+.dash-content,
+.tdash-main,
+.student-content,
+.admin-main {
+  gap: 24px;
+}
+
+:where(.dash-layout, .tutor-shell, .tdash-layout, .student-layout, .student-settings-page) :where(
+  .dash-welcome-copy h1,
+  .mystudents-header h1,
+  .savedtutors-header h1,
+  .pay-header h1,
+  .settings-title,
+  .msgs-header h1,
+  .booking-header h1,
+  .student-page-heading h1,
+  .tutor-onb-sidebar h1
+) {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.18;
+  letter-spacing: -0.025em;
+}
+
+:where(.dash-layout, .tutor-shell, .tdash-layout, .tutor-onb-page, .student-layout,
+  .student-settings-page, .admin-app) :where(h2, .dash-card h2) {
+  line-height: 1.3;
+}
+
+.dash-welcome {
+  padding: 28px;
+  border-radius: var(--app-card-radius);
+}
+
+:where(.dash-card, .mystudents-stat-card, .dash-quick-action, .dash-tutor-card,
+  .dash-subject-card, .settings-nav, .settings-card, .settings-row-card,
+  .booking-format-card, .mybookings-card, .savedtutors-row, .savedtutors-reason-card,
+  .msgs-list-panel, .tdash-profile-card,
+  .tdash-verify-card, .tutor-onb-tip, .student-panel, .student-lesson-card,
+  .student-metric-grid article, .student-settings-grid > section,
+  .admin-metric, .admin-panel, .admin-tutor-application, .admin-review-grid article) {
+  border-radius: var(--app-card-radius);
+}
+
+:where(.dash-card, .settings-card, .mybookings-card, .savedtutors-row,
+  .msgs-list-panel, .student-panel, .student-settings-grid > section,
+  .admin-metric, .admin-panel) {
+  box-shadow: var(--app-card-shadow);
+}
+
+.dash-quick-actions-grid,
+.dash-tutor-row,
+.mystudents-stats-grid,
+.student-metric-grid,
+.admin-metrics {
+  gap: 14px;
+}
+
+.dash-quick-action {
+  min-height: 132px;
+  padding: 18px 14px;
+}
+
+.student-panel,
+.dash-card,
+.admin-panel {
+  padding: 22px;
+}
+
+.student-goal-banner {
+  border-radius: var(--app-card-radius);
+}
+
+.student-panel > header h2,
+.dash-quick-actions h2,
+.dash-section-heading h2,
+.dash-card h2,
+.admin-panel h2,
+.settings-card h2 {
+  font-size: clamp(1.1rem, 2vw, 1.3rem);
+}
+
+.admin-app {
+  grid-template-columns: 248px minmax(0, 1fr);
+}
+
+.admin-topbar {
+  border-radius: 14px;
+}
+
+.admin-heading h1 {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.18;
+}
+
+.admin-metric {
+  padding: 17px;
+}
+
+.admin-field input,
+.admin-field select,
+.admin-field textarea,
+.admin-ticket textarea {
+  border-radius: var(--app-control-radius);
+  font-size: 0.95rem;
+}
+
+.admin-field input,
+.admin-field select {
+  min-height: 54px;
+}
+
+/* Primary forms remain focused and readable rather than becoming full-width. */
+.tutor-onb-layout {
+  grid-template-columns: minmax(260px, 300px) minmax(0, 760px);
+  justify-content: center;
+}
+
+.tutor-onb-main,
+.booking-main > section,
+.booking-sidebar,
+.settings-card {
+  border-radius: var(--app-form-radius);
+}
+
+.tutor-onb-main :where(input:not([type='checkbox']):not([type='radio']):not([type='file']), select),
+.booking-page :where(input:not([type='checkbox']):not([type='radio']), select),
+.settings-shell :where(input:not([type='checkbox']):not([type='radio']), select) {
+  min-height: 54px;
+  border-radius: var(--app-control-radius);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 760px) {
+  .auth-page {
+    padding: 20px 14px;
+  }
+
+  .auth-shell {
+    grid-template-columns: 1fr;
+    border-radius: 22px;
+  }
+
+  .auth-side {
+    display: none;
+  }
+
+  .auth-main form {
+    padding: 30px 24px 34px;
+  }
+
+  .auth-page .field input,
+  .auth-page .field select,
+  .student-login-page form label > div {
+    min-height: 54px;
+  }
+
+  .student-login-page > form {
+    width: calc(100% - 28px);
+    max-width: calc(100% - 28px);
+    padding: 30px 22px;
+    border-radius: 22px;
+  }
+
+  .dash-content,
+  .tdash-main,
+  .student-content,
+  .admin-main {
+    gap: 18px;
+  }
+
+  .dash-welcome,
+  .student-panel,
+  .dash-card,
+  .admin-panel {
+    padding: 18px;
+  }
+
+  .tutor-onb-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================= Final mobile acceptance corrections ================= */
+
+.student-login-page {
+  position: relative;
+}
+
+.student-login-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d8dfeb;
+  border-radius: 50%;
+  background: #fff;
+  color: #0c1530;
+  box-shadow: 0 6px 18px rgba(20, 45, 90, 0.08);
+  cursor: pointer;
+}
+
+.student-login-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.verify-form {
+  width: min(480px, 100%);
+  margin: auto;
+  padding: 38px 42px 42px;
+}
+
+@media (max-width: 680px) {
+  /* Compact primary authentication flows */
+  .auth-page {
+    min-height: 100svh;
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .auth-shell {
+    max-height: calc(100svh - 16px);
+    overflow-y: auto;
+    border-radius: 18px;
+  }
+
+  .auth-main form,
+  .verify-form {
+    max-width: 440px;
+    padding: 18px 20px 20px;
+  }
+
+  .login-form h2,
+  .create-form h2,
+  .verify-header h2 {
+    margin-bottom: 3px;
+    font-size: 1.35rem;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .login-form > p,
+  .create-form > p,
+  .verify-header p {
+    margin-bottom: 10px;
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+
+  .auth-page .field {
+    margin: 8px 0;
+  }
+
+  .auth-page .field span,
+  .field-label-standalone {
+    margin-bottom: 4px;
+    font-size: 0.76rem;
+    line-height: 1.15;
+  }
+
+  .auth-page .field input,
+  .auth-page .field select {
+    min-height: 44px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    font-size: 0.86rem;
+  }
+
+  .auth-page .btn {
+    min-height: 44px;
+    font-size: 0.86rem;
+  }
+
+  .auth-page .form-actions {
+    margin: 4px 0;
+    font-size: 0.75rem;
+  }
+
+  .auth-page .role-options {
+    margin-bottom: 8px;
+  }
+
+  .auth-page .role {
+    min-height: 58px;
+    padding: 7px 6px;
+    gap: 3px;
+    font-size: 0.75rem;
+  }
+
+  .password-criteria {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px 8px;
+    margin-bottom: 7px;
+  }
+
+  .password-criteria li {
+    gap: 4px;
+    font-size: 0.64rem;
+    line-height: 1.15;
+  }
+
+  .password-strength {
+    gap: 4px;
+    margin-bottom: 7px;
+  }
+
+  .auth-disclaimer,
+  .auth-switch,
+  .or-row,
+  .resend-row {
+    margin: 7px 0 0;
+    font-size: 0.7rem;
+    line-height: 1.25;
+  }
+
+  .or-row {
+    margin: 7px 0;
+  }
+
+  .google-btn {
+    min-height: 42px !important;
+  }
+
+  .verify-header {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .verify-icon-circle {
+    width: 42px;
+    height: 42px;
+  }
+
+  .verify-icon-circle img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .email-badge,
+  .verify-tip {
+    padding: 10px;
+    margin-bottom: 10px;
+    font-size: 0.72rem;
+  }
+
+  .otp-input {
+    min-height: 48px !important;
+    padding: 8px 12px !important;
+    font-size: 1.2rem !important;
+  }
+
+  .verify-divider {
+    margin: 10px 0;
+  }
+
+  .security-note {
+    font-size: 0.65rem;
+  }
+
+  /* Preserve the Student Sign-In split composition at phone sizes. */
+  .student-login-page {
+    min-height: 100svh;
+    grid-template-columns: minmax(128px, 40%) minmax(0, 60%);
+    overflow: hidden;
+  }
+
+  .student-login-page > section {
+    display: flex;
+    padding: 16px 12px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .student-login-page > section .student-brand {
+    align-self: flex-start;
+    transform: scale(0.75);
+    transform-origin: left top;
+  }
+
+  .student-login-page > section > img {
+    width: min(145px, 100%);
+    margin: 12px auto;
+  }
+
+  .student-login-page > section h1 {
+    margin: 0 0 5px;
+    font-size: clamp(0.72rem, 2.6vw, 0.95rem);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .student-login-page > section p {
+    font-size: 0.65rem;
+    line-height: 1.35;
+  }
+
+  .student-login-page > form {
+    width: calc(100% - 20px);
+    max-width: calc(100% - 20px);
+    padding: 54px 8px 16px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .student-login-page form > h1 {
+    margin-bottom: 4px;
+    font-size: clamp(1.05rem, 4vw, 1.35rem);
+    white-space: nowrap;
+  }
+
+  .student-login-page form > p,
+  .student-login-help,
+  .student-login-page form > a {
+    font-size: 0.65rem;
+    line-height: 1.3;
+  }
+
+  .student-login-page form label {
+    margin: 11px 0;
+    font-size: 0.72rem;
+  }
+
+  .student-login-page form label > div {
+    min-height: 44px;
+    padding: 0 9px;
+  }
+
+  .student-login-page form input {
+    font-size: 0.72rem;
+  }
+
+  .student-login-page form > .btn {
+    min-height: 44px;
+  }
+
+  .student-login-close {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Remaining landing acceptance items */
+  .hero-copy h1 {
+    font-size: clamp(1.32rem, 6.8vw, 1.8rem);
+    line-height: 0.96;
+  }
+
+  .hero-visual {
+    min-height: 215px;
+  }
+
+  .hero-ring {
+    width: 200px;
+  }
+
+  .hero-badge {
+    padding: 3px 4px;
+    transform: scale(0.64);
+  }
+
+  .hero-badge-courses {
+    transform-origin: top right;
+  }
+
+  .hero-badge-classes {
+    transform-origin: bottom left;
+  }
+
+  .hero-badge-certificates {
+    transform-origin: bottom right;
+  }
+
+  .social-proof {
+    align-items: flex-start;
+  }
+
+  .proof-copy .stars {
+    font-size: 0.58rem;
+  }
+
+  .course-card {
+    flex-basis: calc((100% - 9px) / 2);
+    min-width: calc((100% - 9px) / 2);
+  }
+
+  .course-card h3 {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .steps-section > h2 {
+    text-align: center;
+  }
+
+  .steps-grid {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+    transform: scale(0.94);
+    transform-origin: top center;
+  }
+}
+
+@media (max-width: 390px) {
+  .student-login-page {
+    grid-template-columns: minmax(116px, 38%) minmax(0, 62%);
+  }
+
+  .student-login-page > section {
+    padding: 12px 8px;
+  }
+
+  .student-login-page > section p {
+    display: none;
+  }
+
+  .student-login-page > form {
+    width: calc(100% - 12px);
+    max-width: calc(100% - 12px);
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+}
+
+@media (max-width: 1120px) {
+  .hero-badge {
+    padding: 3px 4px;
+    gap: 4px;
+    transform: scale(0.62);
+  }
+
+  .hero-badge-courses { transform-origin: top right; }
+  .hero-badge-classes { transform-origin: bottom left; }
+  .hero-badge-certificates { transform-origin: bottom right; }
+}
+
+/* Final auth containment overrides must follow all legacy responsive rules. */
+.auth-main,
+.auth-main form {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 680px) {
+  .auth-page {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+    min-height: 100dvh;
+    justify-content: flex-start;
+    padding: 6px;
+  }
+
+  .auth-shell {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 12px);
+    box-sizing: border-box;
+  }
+
+  .auth-main form,
+  .verify-form {
+    width: 100%;
+    max-width: 100%;
+    padding: 14px 16px 16px;
+    box-sizing: border-box;
+  }
+
+  .auth-page .form-actions {
+    gap: 10px;
+  }
+
+  .auth-page .form-actions a {
+    white-space: nowrap;
+  }
+
+  .auth-page .auth-disclaimer {
+    overflow-wrap: anywhere;
   }
 }

@@ -16,3 +16,5 @@ supabase/.temp
 .claude/
 
 .git-old-backup/
+.vercel
+.env*

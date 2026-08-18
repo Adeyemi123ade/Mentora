@@ -80,9 +80,7 @@ const navItems = [
   { label: 'Home', href: '/' },
   { label: 'Courses', href: '/#courses' },
   { label: 'How it Works', href: '/#how-it-works' },
-  { label: 'For Tutors', href: '/login?mode=signup&role=TUTOR' },
   { label: 'About Us', href: '/#about' },
-  { label: 'Contact', href: '/help/faq' },
 ];
 
 const featureTiles = [
@@ -93,10 +91,10 @@ const featureTiles = [
 ];
 
 const courses = [
-  { title: 'Product Design', category: 'Product Design', level: 'Beginner', rating: '4.8', reviews: '320', image: webDevelopmentCourseImage, imageAlt: 'Digital product interface representing product design' },
-  { title: 'Financial Literacy', category: 'Financial Literacy', level: 'Beginner', rating: '4.7', reviews: '210', image: financialLiteracyCourseImage, imageAlt: 'Coin growth chart representing financial literacy' },
-  { title: 'Artificial Intelligence', category: 'Artificial Intelligence', level: 'Intermediate', rating: '4.9', reviews: '180', image: artificialIntelligenceCourseImage, imageAlt: 'Artificial brain and circuitry representing artificial intelligence' },
-  { title: 'Public Speaking', category: 'Public Speaking', level: 'Beginner', rating: '4.6', reviews: '290', image: digitalMarketingCourseImage, imageAlt: 'Microphone representing public speaking' },
+  { title: 'Product Design', category: 'Product Design', level: 'Beginner', image: webDevelopmentCourseImage, imageAlt: 'Digital product interface representing product design' },
+  { title: 'Financial Literacy', category: 'Financial Literacy', level: 'Beginner', image: financialLiteracyCourseImage, imageAlt: 'Coin growth chart representing financial literacy' },
+  { title: 'Artificial Intelligence', category: 'Artificial Intelligence', level: 'Intermediate', image: artificialIntelligenceCourseImage, imageAlt: 'Artificial brain and circuitry representing artificial intelligence' },
+  { title: 'Public Speaking', category: 'Public Speaking', level: 'Beginner', image: digitalMarketingCourseImage, imageAlt: 'Microphone representing public speaking' },
 ];
 
 const steps = [
@@ -113,6 +111,14 @@ function BrandMark() {
 import { Routes, Route, Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 
 function LandingPage() {
+  const courseCarouselRef = useRef<HTMLDivElement>(null);
+
+  const scrollCourses = (direction: -1 | 1) => {
+    const carousel = courseCarouselRef.current;
+    if (!carousel) return;
+    carousel.scrollBy({ left: direction * Math.max(carousel.clientWidth * 0.8, 260), behavior: 'smooth' });
+  };
+
   return (
     <main className="landing-content">
       <section className="hero-section">
@@ -136,19 +142,8 @@ function LandingPage() {
           </div>
 
           <div className="social-proof">
-            <div className="avatar-stack" aria-hidden="true">
-              <div className="avatar avatar-one">AA</div>
-              <div className="avatar avatar-two">AB</div>
-              <div className="avatar avatar-three">AC</div>
-              <div className="avatar avatar-four">AD</div>
-              <div className="avatar avatar-plus">+2k</div>
-            </div>
             <div className="proof-copy">
-              <div className="stars" aria-label="4.8 out of 5 stars">★★★★★</div>
-              <p>
-                <strong>4.8 (1200+ reviews)</strong>
-              </p>
-              <span>Trusted by thousands of learners</span>
+              <span>A trusted partner in your learning journey</span>
             </div>
           </div>
         </div>
@@ -160,10 +155,10 @@ function LandingPage() {
             </div>
 
             <div className="hero-badge hero-badge-courses">
-              <span className="hero-badge-icon" aria-hidden="true">🎓</span>
+              <span className="hero-badge-icon" aria-hidden="true"><GraduationCapIcon className="hero-course-cap" /></span>
               <div>
-                <strong>1000+</strong>
-                <span>Online Courses</span>
+                <strong>Online Learning</strong>
+                <span>Explore available courses</span>
               </div>
             </div>
 
@@ -190,19 +185,21 @@ function LandingPage() {
         </div>
       </section>
 
-      <section className="feature-grid">
-        {featureTiles.map((tile) => (
-          <article key={tile.title} className="feature-card">
-            <div className={`feature-icon ${tile.icon}`} aria-hidden="true">
-              {tile.icon === 'book' && <span className="icon-book" />}
-              {tile.icon === 'cap' && <span className="icon-cap" />}
-              {tile.icon === 'chart' && <span className="icon-chart" />}
-              {tile.icon === 'shield' && <span className="icon-shield" />}
-            </div>
-            <h3>{tile.title}</h3>
-            <p>{tile.description}</p>
-          </article>
-        ))}
+      <section className="feature-section-card" aria-label="Mentora learning features">
+        <div className="feature-grid">
+          {featureTiles.map((tile) => (
+            <article key={tile.title} className="feature-card">
+              <div className={`feature-icon ${tile.icon}`} aria-hidden="true">
+                {tile.icon === 'book' && <span className="icon-book" />}
+                {tile.icon === 'cap' && <span className="icon-cap" />}
+                {tile.icon === 'chart' && <span className="icon-chart" />}
+                {tile.icon === 'shield' && <span className="icon-shield" />}
+              </div>
+              <h3>{tile.title}</h3>
+              <p>{tile.description}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="courses-section" id="courses">
@@ -211,21 +208,22 @@ function LandingPage() {
           <Link to="/login?mode=signup&role=PARENT" aria-label="Create an account to explore tutors">Explore with Mentora <span>→</span></Link>
         </div>
 
-        <div className="course-grid">
-          {courses.map((course) => (
-            <article key={course.title} className="course-card">
-              <div className="course-image">
-                <img src={course.image} alt={course.imageAlt} loading="lazy" decoding="async" />
-              </div>
-              <h3>{course.title}</h3>
-              <div className="rating-row">
-                <span className="stars-mini">★</span>
-                <span>{course.rating}</span>
-                <span className="light-text">({course.reviews})</span>
-                <span className="level-pill">{course.level}</span>
-              </div>
-            </article>
-          ))}
+        <div className="course-carousel-shell">
+          <button className="course-carousel-btn" type="button" onClick={() => scrollCourses(-1)} aria-label="Show previous courses">‹</button>
+          <div className="course-grid" ref={courseCarouselRef}>
+            {courses.map((course) => (
+              <article key={course.title} className="course-card">
+                <div className="course-image">
+                  <img src={course.image} alt={course.imageAlt} loading="lazy" decoding="async" />
+                </div>
+                <h3>{course.title}</h3>
+                <div className="rating-row">
+                  <span className="level-pill">{course.level}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+          <button className="course-carousel-btn" type="button" onClick={() => scrollCourses(1)} aria-label="Show more courses">›</button>
         </div>
       </section>
 
@@ -249,7 +247,7 @@ function LandingPage() {
       </section>
 
       <section className="cta-panel" id="about">
-        <div className="cta-brand" aria-hidden="true">🎓</div>
+        <div className="cta-brand" aria-hidden="true"><GraduationCapIcon /></div>
         <div className="cta-copy">
           <h2>Ready to start your learning journey?</h2>
           <p>Join Mentora today and unlock your potential.</p>
@@ -601,7 +599,7 @@ function AuthPage() {
           ) : (
             <>
               <h1>Your Learning Journey Starts <span className="accent accent-underline">Here</span></h1>
-              <p>Join thousands of students, parents, and tutors who are achieving their goals together on Mentora.</p>
+              <p>Create your Mentora account and begin a learning journey built around your real goals and activity.</p>
             </>
           )}
 
@@ -713,13 +711,13 @@ function AuthPage() {
 
               <p className="auth-disclaimer">By continuing, you agree to our <Link to="/terms">Terms &amp; Conditions</Link> and <Link to="/privacy">Privacy Policy</Link>.</p>
 
+              <p className="auth-switch">Already have an account? <button type="button" className="link-btn" onClick={() => setMode('login')}>Sign in</button></p>
+
               <div className="or-row">or</div>
               <button type="button" className="btn btn-secondary full google-btn" onClick={handleGoogleSignIn} disabled={oauthSubmitting}>
                 {oauthSubmitting && <span className="spinner" aria-hidden="true" />}
                 <GoogleIcon /> {oauthSubmitting ? 'Redirecting…' : 'Sign up with Google'}
               </button>
-
-              <p className="auth-switch">Already have an account? <button type="button" className="link-btn" onClick={() => setMode('login')}>Sign in</button></p>
             </form>
           )}
         </div>
@@ -731,7 +729,7 @@ function AuthPage() {
 function VerifyPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { verifyEmailOtp, resendSignupOtp } = useAuth();
+  const { user, initializing, verifyEmailOtp, resendSignupOtp } = useAuth();
   const [email, setEmail] = useState(searchParams.get('email') ?? '');
   const [code, setCode] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -745,6 +743,11 @@ function VerifyPage() {
     const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [cooldown]);
+
+  useEffect(() => {
+    if (initializing || !user) return;
+    void postAuthDestination(user).then((destination) => navigate(destination, { replace: true }));
+  }, [initializing, navigate, user]);
 
   async function handleVerify(enteredCode: string) {
     if (verifying) return;
@@ -1152,13 +1155,23 @@ function ResetPasswordPage() {
 }
 
 function RequireAuth({ role, children }: { role?: AppRole; children: ReactNode }) {
-  const { user, initializing } = useAuth();
+  const { user, initializing, hasSession, authError, refreshUser } = useAuth();
 
   if (initializing) {
     return (
       <div className="auth-loading">
         <span className="spinner" aria-hidden="true" />
         <span>Loading…</span>
+      </div>
+    );
+  }
+
+  if (!user && hasSession) {
+    return (
+      <div className="auth-loading">
+        <strong>We could not load your account yet.</strong>
+        <span>{authError ?? 'Your session is still active. Please try again.'}</span>
+        <button type="button" className="btn btn-primary" onClick={() => void refreshUser()}>Try again</button>
       </div>
     );
   }
@@ -1436,6 +1449,8 @@ function AddStudentPage() {
 
 
 function SiteLayout({ children }: { children: ReactNode }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="mentora-page">
       <header className="topbar">
@@ -1456,9 +1471,28 @@ function SiteLayout({ children }: { children: ReactNode }) {
 
         <div className="auth-actions">
           <ThemeToggle />
-          <Link to="/login" className="btn btn-ghost">Log in</Link>
-          <Link to="/login?mode=signup&role=PARENT" className="btn btn-primary">Sign up</Link>
+          <Link to="/login" className="btn btn-ghost desktop-auth-action">Log in</Link>
+          <Link to="/login?mode=signup&role=PARENT" className="btn btn-primary desktop-auth-action">Sign up</Link>
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
         </div>
+
+        {mobileMenuOpen && (
+          <nav className="mobile-menu" aria-label="Mobile menu">
+            <Link to="/login?mode=signup&role=PARENT" onClick={() => setMobileMenuOpen(false)}>Get Started</Link>
+            <Link to="/login" onClick={() => setMobileMenuOpen(false)}>Login</Link>
+            <a href="/#how-it-works" onClick={() => setMobileMenuOpen(false)}>How It Works</a>
+          </nav>
+        )}
       </header>
 
       {children}

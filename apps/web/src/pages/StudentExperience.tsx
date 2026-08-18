@@ -24,6 +24,10 @@ export function StudentLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const close = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/login', { replace: true });
+  };
   async function submit(event: FormEvent) {
     event.preventDefault(); if (submitting) return; setError('');
     if (!/^MEN-[A-F0-9]{8}$/i.test(loginId.trim())) { setError('Enter the Student ID provided by your parent, for example MEN-12AB34CD.'); return; }
@@ -33,7 +37,7 @@ export function StudentLoginPage() {
     catch (err) { setError(err instanceof Error ? err.message : 'Could not sign you in. Check your Student ID and password.'); }
     finally { setSubmitting(false); }
   }
-  return <main className="student-login-page"><section><div className="student-brand"><img src={mentoraLogo} alt=""/><strong>Mentora</strong></div><img src={learningBooks} alt="Graduation cap resting on books beside a pencil cup"/><h1>Your learning starts here</h1><p>Open your lessons, resources and progress in one safe place.</p></section><form onSubmit={submit}><h1>Student sign in</h1><p>Use the Student ID and password provided by your parent.</p><label><span>Student ID</span><div><GraduationCapIcon/><input value={loginId} onChange={(event)=>setLoginId(event.target.value.toUpperCase())} placeholder="MEN-12AB34CD" autoComplete="username"/></div></label><label><span>Password</span><div><LockIcon/><input type={showPassword?'text':'password'} value={password} onChange={(event)=>setPassword(event.target.value)} placeholder="Enter your password" autoComplete="current-password"/><button type="button" onClick={()=>setShowPassword((value)=>!value)}>{showPassword?'Hide':'Show'}</button></div></label>{error&&<p className="form-error" role="alert">{error}</p>}<button className="btn btn-primary full" disabled={submitting}>{submitting&&<span className="spinner"/>}{submitting?'Signing in...':'Sign in'}</button><p className="student-login-help">Forgot your password? Ask your parent to reset it from their Mentora account.</p><Link to="/login">Parent or tutor sign in</Link></form></main>;
+  return <main className="student-login-page"><button type="button" className="student-login-close" onClick={close} aria-label="Close student sign in"><XIcon/></button><section><div className="student-brand"><img src={mentoraLogo} alt=""/><strong>Mentora</strong></div><img src={learningBooks} alt="Graduation cap resting on books beside a pencil cup"/><h1>Your learning starts here</h1><p>Open your lessons, resources and progress in one safe place.</p></section><form onSubmit={submit}><h1>Student sign in</h1><p>Use the Student ID and password provided by your parent.</p><label><span>Student ID</span><div><GraduationCapIcon/><input value={loginId} onChange={(event)=>setLoginId(event.target.value.toUpperCase())} placeholder="MEN-12AB34CD" autoComplete="username"/></div></label><label><span>Password</span><div><LockIcon/><input type={showPassword?'text':'password'} value={password} onChange={(event)=>setPassword(event.target.value)} placeholder="Enter your password" autoComplete="current-password"/><button type="button" onClick={()=>setShowPassword((value)=>!value)}>{showPassword?'Hide':'Show'}</button></div></label>{error&&<p className="form-error" role="alert">{error}</p>}<button className="btn btn-primary full" disabled={submitting}>{submitting&&<span className="spinner"/>}{submitting?'Signing in...':'Sign in'}</button><p className="student-login-help">Forgot your password? Ask your parent to reset it from their Mentora account.</p><Link to="/login">Parent or tutor sign in</Link></form></main>;
 }
 
 const STUDENT_NAV = [

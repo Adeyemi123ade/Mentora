@@ -9,7 +9,7 @@ import type {
   AvailabilitySlot,
   Notification,
 } from '@mentora/shared';
-import { apiRequest, ApiError, logout } from '../lib/api';
+import { apiRequest, logout } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { Modal } from '../components/Modal';
@@ -91,9 +91,7 @@ export function TutorDashboardShell({ children }: { children: ReactNode }) {
         }
         setProfile(p);
       })
-      .catch((err) => {
-        if (err instanceof ApiError && err.status === 401) navigate('/login');
-      });
+      .catch(() => {});
   }, [user, navigate]);
 
   useEffect(() => {

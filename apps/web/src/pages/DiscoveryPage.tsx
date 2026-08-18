@@ -103,8 +103,7 @@ function TutorCard({ tutor, saved, onToggleSave }: { tutor: Tutor; saved: boolea
 
       <div className="dash-tutor-meta">
         <StarIcon className="dash-tutor-rating-icon" />
-        <span>{tutor.rating}</span>
-        <span className="dash-tutor-reviews">({tutor.reviews} reviews)</span>
+        {tutor.reviews > 0 ? <><span>{tutor.rating}</span><span className="dash-tutor-reviews">({tutor.reviews} reviews)</span></> : <span className="dash-tutor-reviews">No reviews yet</span>}
       </div>
 
       <div className="disc-tutor-tags">

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { Booking, BookingFormat, Student, WalletDto, InitializePaymentResponse, PublicTutorDto } from '@mentora/shared';
-import { getTutorById } from '../data/tutors';
 import type { Tutor } from '../data/tutors';
 import { apiRequest, ApiError } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -10,8 +9,6 @@ import { openPaystackCheckout } from '../lib/paystack';
 import { adaptPublicTutor } from '../lib/tutorAdapter';
 import { Avatar, InitialsAvatar } from '../components/Avatar';
 import {
-  getTimeSlotsForDate,
-  isDateAvailable,
   isPastDate,
   isSameDate,
   formatBookingDate,
@@ -94,13 +91,15 @@ function TutorMiniCard({ tutor }: { tutor: Tutor }) {
 export function BookingPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const staticTutor = id ? getTutorById(id) : undefined;
 
   const [realTutorDto, setRealTutorDto] = useState<PublicTutorDto | null | undefined>(undefined);
   const [realAvailability, setRealAvailability] = useState<RealAvailabilitySlot[]>([]);
 
   useEffect(() => {
-    if (staticTutor || !id) return;
+    if (!id) {
+      setRealTutorDto(null);
+      return;
+    }
     apiRequest<{ tutor: PublicTutorDto }>(`/api/tutors/${id}`)
       .then((res) => setRealTutorDto(res.data?.tutor ?? null))
       .catch(() => setRealTutorDto(null));
@@ -110,8 +109,7 @@ export function BookingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const isReal = !staticTutor && Boolean(realTutorDto);
-  const tutor = staticTutor ?? (realTutorDto ? adaptPublicTutor(realTutorDto) : undefined);
+  const tutor = realTutorDto ? adaptPublicTutor(realTutorDto) : undefined;
 
   const [students, setStudents] = useState<Student[] | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -169,7 +167,7 @@ export function BookingPage() {
   }, [selectedStudentId, subject, format, selectedDate, selectedSlot]);
 
   if (!tutor) {
-    if (!staticTutor && realTutorDto === undefined) return null;
+    if (realTutorDto === undefined) return null;
     return (
       <div className="dash-coming-soon">
         <h2>Tutor not found</h2>
@@ -181,7 +179,7 @@ export function BookingPage() {
 
   const selectedStudent = students?.find((s) => s.id === selectedStudentId) ?? null;
   const studentFirstName = selectedStudent?.fullName.split(' ')[0] ?? 'your student';
-  const slots = selectedDate ? (isReal ? getRealTimeSlotsForDate(realAvailability, selectedDate) : getTimeSlotsForDate(tutor, selectedDate)) : [];
+  const slots = selectedDate ? getRealTimeSlotsForDate(realAvailability, selectedDate) : [];
   const visibleSlots = showMoreTimes ? slots : slots.slice(0, INITIAL_SLOT_COUNT);
 
   const platformFee = Math.round(tutor.price * PLATFORM_FEE_RATE);
@@ -223,7 +221,7 @@ export function BookingPage() {
 
   function handleSelectDate(date: Date) {
     if (!tutor) return;
-    const available = isReal ? isRealDateAvailable(realAvailability, date) : isDateAvailable(tutor, date);
+    const available = isRealDateAvailable(realAvailability, date);
     if (!available) return;
     setSelectedDate(date);
     setSelectedSlot(null);
@@ -535,7 +533,7 @@ export function BookingPage() {
                 </div>
                 <div className="booking-calendar-grid">
                   {buildCalendarGrid(calendarMonth).map(({ date, inMonth }) => {
-                    const available = inMonth && (isReal ? isRealDateAvailable(realAvailability, date) : isDateAvailable(tutor, date));
+                    const available = inMonth && isRealDateAvailable(realAvailability, date);
                     const selected = selectedDate && isSameDate(date, selectedDate);
                     const past = isPastDate(date);
                     return (

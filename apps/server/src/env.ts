@@ -17,6 +17,7 @@ if (serverEnv) dotenv.config({ path: serverEnv });
 
 const schema = z.object({
   PORT: z.coerce.number().default(4000),
+  HOST: z.string().default('0.0.0.0'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().min(1),
   CLIENT_URL: z.string().min(1).default('http://localhost:5173'),

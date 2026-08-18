@@ -15,7 +15,8 @@
     "test": "npm --workspace apps/server run test && npm --workspace apps/web run test",
     "db:generate": "npm --workspace apps/server run prisma:generate",
     "db:migrate": "npm --workspace apps/server run prisma:migrate",
-    "db:seed": "npm --workspace apps/server run db:seed",
+    "db:seed:demo-tutors": "npm --workspace apps/server run db:seed:demo-tutors",
+    "admin:provision": "npm --workspace apps/server run admin:provision",
     "db:studio": "npm --workspace apps/server run prisma:studio"
   },
   "devDependencies": {

@@ -22,16 +22,9 @@ const transporter = hasRealCredentials
   : null;
 
 export async function sendVerificationEmail(to: string, code: string): Promise<void> {
-  if (env.NODE_ENV !== 'production') {
-    console.log(`[email] Verification code for ${to}: ${code}`);
-  }
-
   if (!transporter) {
-    console.warn(
-      '[email] Brevo SMTP not configured (BREVO_SMTP_LOGIN / BREVO_SMTP_KEY). ' +
-        `Verification email for ${to} was not sent.`,
-    );
-    return;
+    console.error('[email] Brevo SMTP is not configured; verification email was not sent.');
+    throw new AppError(503, 'Email delivery is not configured. Please contact Mentora support.', 'SMTP_NOT_CONFIGURED');
   }
 
   try {

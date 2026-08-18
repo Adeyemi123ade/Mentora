@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { SavedTutor, PublicTutorDto } from '@mentora/shared';
-import { getTutorById, CATEGORY_LABELS } from '../data/tutors';
+import { CATEGORY_LABELS } from '../data/tutors';
 import type { CategoryKey, Tutor } from '../data/tutors';
 import { adaptPublicTutor } from '../lib/tutorAdapter';
 import { apiRequest, ApiError } from '../lib/api';
@@ -59,7 +59,7 @@ export function SavedTutorsPage() {
 
   useEffect(() => {
     if (!savedTutors) return;
-    const missingIds = savedTutors.map((s) => s.tutorId).filter((id) => !getTutorById(id) && !realTutors.has(id));
+    const missingIds = savedTutors.map((s) => s.tutorId).filter((id) => !realTutors.has(id));
     if (missingIds.length === 0) return;
     Promise.all(
       missingIds.map((id) =>
@@ -82,7 +82,7 @@ export function SavedTutorsPage() {
   const rows: Row[] = useMemo(() => {
     return (savedTutors ?? [])
       .map((saved) => {
-        const tutor = getTutorById(saved.tutorId) ?? realTutors.get(saved.tutorId);
+        const tutor = realTutors.get(saved.tutorId);
         return tutor ? { saved, tutor } : null;
       })
       .filter((r): r is Row => r !== null);
@@ -303,8 +303,7 @@ function SavedTutorRow({
         <p className="disc-tutor-title">{tutor.title}</p>
         <div className="dash-tutor-meta">
           <StarIcon className="dash-tutor-rating-icon" />
-          <span>{tutor.rating}</span>
-          <span className="dash-tutor-reviews">({tutor.reviews} reviews)</span>
+          {tutor.reviews > 0 ? <><span>{tutor.rating}</span><span className="dash-tutor-reviews">({tutor.reviews} reviews)</span></> : <span className="dash-tutor-reviews">No reviews yet</span>}
         </div>
         <div className="disc-tutor-tags">
           {tutor.tags.slice(0, 3).map((t) => <span key={t} className="disc-tag">{t}</span>)}
@@ -313,13 +312,13 @@ function SavedTutorRow({
       </div>
 
       <div className="savedtutors-meta-col">
-        <span><TrophyIcon /> {tutor.experienceYears}+ years experience</span>
-        <span><UsersIcon /> {tutor.studentsTaught}+ students taught</span>
-        <span><PinIcon /> {tutor.location}</span>
+        <span><TrophyIcon /> {tutor.experienceYears > 0 ? `${tutor.experienceYears}+ years experience` : 'Experience not specified'}</span>
+        <span><UsersIcon /> {tutor.studentsTaught > 0 ? `${tutor.studentsTaught} students taught` : 'No students yet'}</span>
+        {tutor.location && <span><PinIcon /> {tutor.location}</span>}
       </div>
 
       <div className="savedtutors-action-col">
-        <span className="savedtutors-price">From ₦{tutor.price.toLocaleString()} / session</span>
+        <span className="savedtutors-price">{tutor.price > 0 ? `From ₦${tutor.price.toLocaleString()} / session` : 'Price not set'}</span>
         <span className={tutor.status === 'Online' ? 'dash-status-pill online' : 'dash-status-pill busy'}>{tutor.availabilityLabel}</span>
         <Link to={`/dashboard/tutors/${tutor.id}/book`} className="btn btn-primary"><CalendarIcon /> Book a Session</Link>
         <Link to={`/dashboard/messages?tutor=${tutor.id}`} className="btn btn-secondary">Message</Link>

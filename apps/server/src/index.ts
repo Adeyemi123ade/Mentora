@@ -75,6 +75,6 @@ app.use('/api/tutors', tutorsRouter);
 
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
-  console.log(`MENTORA API listening on http://localhost:${env.PORT}`);
+app.listen(env.PORT, env.HOST, () => {
+  console.log(`MENTORA API listening on http://${env.HOST}:${env.PORT}`);
 });

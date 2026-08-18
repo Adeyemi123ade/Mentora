@@ -54,7 +54,7 @@ describe('adaptPublicTutor', () => {
     expect(tutor.sessionTypes).toEqual(['online', 'in-person']);
   });
 
-  it('falls back to defaults for missing optional fields', () => {
+  it('keeps missing optional profile data empty instead of fabricating it', () => {
     const tutor = adaptPublicTutor({
       ...baseDto,
       photoUrl: null,
@@ -71,7 +71,7 @@ describe('adaptPublicTutor', () => {
     expect(tutor.bio).toBe('This tutor has not added a bio yet.');
     expect(tutor.type).toBe('university');
     expect(tutor.location).toBe('Nigeria');
-    expect(tutor.expertise).toEqual(['General Tutoring']);
+    expect(tutor.expertise).toEqual([]);
     expect(tutor.price).toBe(0);
   });
 

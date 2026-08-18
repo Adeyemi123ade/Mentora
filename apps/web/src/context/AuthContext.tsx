@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AccountSummary, UserSummary } from '@mentora/shared';
 import { supabase } from '../lib/supabase';
@@ -12,6 +12,8 @@ export type AppUser = UserSummary;
 interface AuthContextValue {
   user: AppUser | null;
   initializing: boolean;
+  hasSession: boolean;
+  authError: string | null;
   signIn: (email: string, password: string) => Promise<AppUser>;
   signInStudent: (loginId: string, password: string) => Promise<AppUser>;
   signUp: (input: { email: string; password: string; name: string; role: AppRole }) => Promise<void>;
@@ -27,40 +29,66 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [hasSession, setHasSession] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const userRef = useRef<AppUser | null>(null);
+
+  function storeUser(nextUser: AppUser | null) {
+    userRef.current = nextUser;
+    setUser(nextUser);
+  }
 
   async function refreshUser(): Promise<AppUser | null> {
-    const { data } = await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.getSession();
     if (!data.session) {
-      setUser(null);
+      if (!error) {
+        setHasSession(false);
+        storeUser(null);
+      }
       return null;
     }
+    setHasSession(true);
     try {
       const res = await apiRequest<{ user: AppUser }>('/api/auth/me');
-      if (res.data?.user) setUser(res.data.user);
+      if (res.data?.user) {
+        storeUser(res.data.user);
+        setAuthError(null);
+      }
       return res.data?.user ?? null;
-    } catch {
-      setUser(null);
-      return null;
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'We could not load your Mentora profile.');
+      return userRef.current;
     }
   }
 
   useEffect(() => {
     let active = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      if (data.session) {
-        void refreshUser().finally(() => setInitializing(false));
-      } else {
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        if (!active) return;
+        if (data.session) {
+          setHasSession(true);
+          void refreshUser().finally(() => setInitializing(false));
+        } else {
+          setHasSession(false);
+          setInitializing(false);
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setAuthError('We could not restore your session yet. Please check your connection and try again.');
         setInitializing(false);
-      }
-    });
+      });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setHasSession(Boolean(session));
         void refreshUser();
       } else if (event === 'SIGNED_OUT') {
-        setUser(null);
+        setHasSession(false);
+        setAuthError(null);
+        storeUser(null);
       }
     });
 
@@ -111,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function verifyEmailOtp(email: string, token: string): Promise<AppUser> {
-    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'magiclink' });
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
     const profile = await refreshUser();
     if (!profile) throw new Error('Could not load your profile after verification.');
@@ -142,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, initializing, signIn, signInStudent, signUp, signInWithGoogle, sendPasswordResetEmail, verifyEmailOtp, resendSignupOtp, refreshUser }}>
+    <AuthContext.Provider value={{ user, initializing, hasSession, authError, signIn, signInStudent, signUp, signInWithGoogle, sendPasswordResetEmail, verifyEmailOtp, resendSignupOtp, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -217,7 +217,7 @@ const QUICK_ACTIONS = [
   { label: 'View Bookings', icon: CalendarIcon, tone: 'blue', to: '/dashboard/bookings' },
 ];
 
-const MOCK_SUBJECTS = [
+const SUBJECT_CATEGORIES = [
   { label: 'AI & Machine Learning', icon: RobotIcon },
   { label: 'Coding & Programming', icon: CodeIcon },
   { label: 'Data Science & Analytics', icon: ChartIcon },
@@ -368,7 +368,7 @@ export function DashboardHomePage() {
           <Link to="/dashboard/tutors">View all subjects <span aria-hidden="true">→</span></Link>
         </div>
         <div className="dash-subject-grid">
-          {MOCK_SUBJECTS.map((subject) => {
+          {SUBJECT_CATEGORIES.map((subject) => {
             const Icon = subject.icon;
             return (
               <Link key={subject.label} to="/dashboard/tutors" className="dash-subject-card">

@@ -12,7 +12,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "db:seed": "tsx src/scripts/seedTutors.ts && tsx src/scripts/seedAdmin.ts"
+    "db:seed:demo-tutors": "tsx src/scripts/seedTutors.ts",
+    "admin:provision": "tsx src/scripts/seedAdmin.ts"
   },
   "dependencies": {
     "@mentora/shared": "*",

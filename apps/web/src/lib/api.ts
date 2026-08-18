@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 // In development, use the same host that served the page. A hard-coded
 // localhost points back to the user's device when testing from mobile/LAN.
 const BASE_URL = import.meta.env.VITE_API_URL
-  ?? (import.meta.env.DEV ? `${window.location.protocol}//${window.location.hostname}:4000` : '');
+  ?? (import.meta.env.DEV && typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:4000` : '');
 
 export class ApiError extends Error {
   status: number;
@@ -37,6 +37,9 @@ async function handleResponse<T>(res: Response): Promise<ApiResponse<T>> {
     const code = typeof body.error === 'string' ? body.error : undefined;
     const fieldErrors = typeof body.error === 'object' && body.error !== null ? body.error : undefined;
     const firstFieldMessage = fieldErrors ? Object.values(fieldErrors).flat().find(Boolean) : undefined;
+    if (res.status === 403 && code === 'ACCOUNT_INACTIVE') {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    }
     throw new ApiError(res.status, firstFieldMessage ?? body.message ?? 'Request failed', code, fieldErrors);
   }
 
@@ -49,8 +52,34 @@ async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function isAuthError(status: number, path: string): boolean {
-  return status === 401 && path !== '/api/auth/me';
+let refreshPromise: Promise<boolean> | null = null;
+
+function refreshFailureIsDefinitive(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as { status?: number; code?: string; message?: string };
+  return candidate.status === 400
+    || candidate.status === 401
+    || /refresh[_ ]?token.*(invalid|expired|not found|missing)|invalid.*refresh[_ ]?token/i.test(`${candidate.code ?? ''} ${candidate.message ?? ''}`);
+}
+
+async function refreshAuthSession(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (data.session) return true;
+      if (!error || refreshFailureIsDefinitive(error)) {
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
+      return false;
+    } catch {
+      // A network/Supabase outage is not proof that the stored session is invalid.
+      return false;
+    }
+  })().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
@@ -62,8 +91,13 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     asNetworkError(error);
   }
 
-  if (isAuthError(res.status, path)) {
-    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  if (res.status === 401 && await refreshAuthSession()) {
+    const retryHeaders = { 'Content-Type': 'application/json', ...(await authHeaders()), ...options.headers };
+    try {
+      res = await fetch(`${BASE_URL}${path}`, { ...options, credentials: 'include', headers: retryHeaders });
+    } catch (error) {
+      asNetworkError(error);
+    }
   }
 
   return handleResponse<T>(res);
@@ -78,15 +112,20 @@ export async function apiUpload<T>(path: string, formData: FormData, method: 'PO
     asNetworkError(error);
   }
 
-  if (isAuthError(res.status, path)) {
-    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  if (res.status === 401 && await refreshAuthSession()) {
+    const retryHeaders = await authHeaders();
+    try {
+      res = await fetch(`${BASE_URL}${path}`, { method, credentials: 'include', headers: retryHeaders, body: formData });
+    } catch (error) {
+      asNetworkError(error);
+    }
   }
 
   return handleResponse<T>(res);
 }
 
 export async function logout(navigate: NavigateFunction): Promise<void> {
-  await supabase.auth.signOut().catch(() => {});
   await apiRequest('/api/auth/logout', { method: 'POST' }).catch(() => {});
+  await supabase.auth.signOut().catch(() => {});
   navigate('/login');
 }

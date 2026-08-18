@@ -16,8 +16,12 @@ const TUTORS: { id: string; name: string }[] = [
   { id: 't12', name: 'Yusuf Bello' },
 ];
 
-if (process.env.NODE_ENV === 'production') {
-  throw new Error('Tutor seeding is disabled in production.');
+const databaseUrl = process.env.DATABASE_URL;
+const databaseHost = databaseUrl ? new URL(databaseUrl).hostname : '';
+const isLocalDatabase = databaseHost === 'localhost' || databaseHost === '127.0.0.1';
+
+if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DEMO_SEED !== 'true' || !isLocalDatabase) {
+  throw new Error('Demo tutor seeding is restricted to an explicitly authorized local database.');
 }
 
 const configuredSeedPassword = process.env.SEED_TUTOR_PASSWORD;

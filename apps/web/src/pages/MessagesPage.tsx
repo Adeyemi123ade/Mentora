@@ -4,7 +4,6 @@ import type { ConversationSummary, MessageDto } from '@mentora/shared';
 import { apiRequest, ApiError } from '../lib/api';
 import { Avatar } from '../components/Avatar';
 import { Modal } from '../components/Modal';
-import { getTutorById } from '../data/tutors';
 import {
   SearchIcon,
   ChevronLeftIcon,
@@ -33,8 +32,8 @@ function formatTime(iso: string): string {
 }
 
 function tutorMeta(tutorId: string) {
-  const catalogTutor = getTutorById(tutorId);
-  return { title: catalogTutor?.title ?? null, photo: catalogTutor?.photo ?? null };
+  void tutorId;
+  return { title: null, photo: null };
 }
 
 export function MessagesPage() {

@@ -582,6 +582,9 @@ export const TUTORS: Tutor[] = [
 ];
 
 export function getTutorById(id: string): Tutor | undefined {
+  // The static catalog is a test fixture only. Production and development UI
+  // must resolve tutor identities from the API/database.
+  if (import.meta.env.MODE !== 'test') return undefined;
   return TUTORS.find((t) => t.id === id);
 }
 
