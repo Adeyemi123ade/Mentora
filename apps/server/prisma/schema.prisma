@@ -1,0 +1,582 @@
+// This Prisma schema establishes the default data model foundation for the application.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  supabaseUserId    String?            @unique
+  email             String             @unique
+  name              String
+  role              Role               @default(STUDENT)
+  emailVerified     Boolean            @default(false)
+  photoUrl          String?
+  phone             String?
+  location          String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  students          Student[]
+  notifications     Notification[]
+  bookingsAsParent  Booking[]          @relation("ParentBookings")
+  bookingsAsTutor   Booking[]          @relation("TutorBookings")
+  savedByParents    SavedTutor[]       @relation("ParentSavedTutors")
+  savedAsTutor      SavedTutor[]       @relation("TutorSavedBy")
+  tutorViewsAsParent TutorView[]       @relation("ParentTutorViews")
+  viewedAsTutor     TutorView[]        @relation("TutorViewedBy")
+  reviews           Review[]
+  preferences       UserPreferences?
+  conversationsAsParent Conversation[] @relation("ParentConversations")
+  conversationsAsTutor  Conversation[] @relation("TutorConversations")
+  sentMessages          Message[]
+  wallet                Wallet?
+  paymentMethods        PaymentMethod[]
+  transactions          Transaction[]
+  tutorProfile          TutorProfile?
+  availability          TutorAvailability[]
+  studentProgressGiven  TutorStudentProgress[]
+  studentIdentity       Student?           @relation("StudentAccount")
+  loginEvents           LoginEvent[]
+  accountStatus         AccountStatus      @default(ACTIVE)
+  suspendedAt           DateTime?
+  suspensionReason      String?
+  adminActions          AdminAuditLog[]    @relation("AdminActor")
+  reviewedTutorApplications TutorVerificationEvent[] @relation("VerificationReviewer")
+  disputesOpened        Dispute[]          @relation("DisputeOpenedBy")
+  disputesAsParent      Dispute[]          @relation("DisputeParent")
+  disputesAsTutor       Dispute[]          @relation("DisputeTutor")
+  supportTickets        SupportTicket[]
+  supportMessages       SupportMessage[]
+  moderatedReviews      Review[]           @relation("ReviewModerator")
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum Role {
+  STUDENT
+  PARENT
+  TUTOR
+  ADMIN
+}
+
+model LoginEvent {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    LoginEventType
+  createdAt DateTime        @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum LoginEventType {
+  LOGIN
+  LOGOUT
+}
+
+model Student {
+  id              String   @id @default(cuid())
+  loginId         String   @unique
+  accountUserId   String?  @unique
+  accountUser     User?    @relation("StudentAccount", fields: [accountUserId], references: [id], onDelete: SetNull)
+  parentId        String
+  parent          User     @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  fullName        String
+  age             Int?
+  gender          Gender   @default(UNSPECIFIED)
+  grade           String?
+  interests       String[] @default([])
+  photoUrl        String?
+  overallProgress Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  bookings        Booking[]
+  learningGoals   LearningGoal[]
+  tutorNotes      Message[]
+  tutorProgress   TutorStudentProgress[]
+
+  @@index([parentId])
+}
+
+model LearningGoal {
+  id         String   @id @default(cuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title      String
+  category   String   @default("GENERAL")
+  progress   Int      @default(0)
+  targetDate DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([studentId])
+}
+
+enum Gender {
+  BOY
+  GIRL
+  UNSPECIFIED
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  parentId      String
+  parent        User          @relation("ParentBookings", fields: [parentId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tutorId       String
+  tutor         User          @relation("TutorBookings", fields: [tutorId], references: [id])
+  tutorName     String
+  tutorTitle    String
+  tutorPhotoUrl String?
+  subject       String
+  specificTopic String?
+  format        BookingFormat
+  date          DateTime
+  startTime     String
+  endTime       String
+  message       String?
+  price         Int
+  platformFee   Int
+  total         Int
+  status        BookingStatus @default(CONFIRMED)
+  approvalStatus BookingApprovalStatus @default(PENDING)
+  respondedAt   DateTime?
+  meetingProvider String?
+  meetingUrl      String?
+  meetingUpdatedAt DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  review        Review?
+  transactions  Transaction[]
+  disputes      Dispute[]
+
+  @@index([parentId])
+  @@index([studentId])
+  @@index([tutorId])
+}
+
+enum BookingFormat {
+  ONE_ON_ONE
+  GROUP
+  RECORDED
+}
+
+enum BookingApprovalStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum BookingStatus {
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model SavedTutor {
+  id        String   @id @default(cuid())
+  parentId  String
+  parent    User     @relation("ParentSavedTutors", fields: [parentId], references: [id], onDelete: Cascade)
+  tutorId   String
+  tutor     User     @relation("TutorSavedBy", fields: [tutorId], references: [id], onDelete: Cascade)
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([parentId, tutorId])
+  @@index([parentId])
+}
+
+model TutorView {
+  id       String   @id @default(cuid())
+  parentId String
+  parent   User     @relation("ParentTutorViews", fields: [parentId], references: [id], onDelete: Cascade)
+  tutorId  String
+  tutor    User     @relation("TutorViewedBy", fields: [tutorId], references: [id], onDelete: Cascade)
+  viewedAt DateTime @default(now())
+
+  @@unique([parentId, tutorId])
+  @@index([parentId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  parentId  String
+  parent    User     @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  rating    Int
+  title     String
+  body      String
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  moderationStatus ReviewModerationStatus @default(PUBLISHED)
+  moderationReason String?
+  moderatedAt DateTime?
+  moderatedById String?
+  moderatedBy User? @relation("ReviewModerator", fields: [moderatedById], references: [id], onDelete: SetNull)
+
+  @@index([parentId])
+  @@index([moderatedById])
+}
+
+enum ReviewModerationStatus {
+  PUBLISHED
+  FLAGGED
+  UNDER_REVIEW
+  REMOVED
+}
+
+model UserPreferences {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailNotifications    Boolean  @default(true)
+  pushNotifications     Boolean  @default(false)
+  bookingReminders      Boolean  @default(true)
+  sessionReminders      Boolean  @default(true)
+  messageNotifications  Boolean  @default(true)
+  paymentNotifications  Boolean  @default(true)
+  reviewNotifications   Boolean  @default(true)
+  announcements         Boolean  @default(false)
+  quietHoursEnabled     Boolean  @default(false)
+  quietHoursStart       String   @default("22:00")
+  quietHoursEnd         String   @default("07:00")
+  contentFiltering      Boolean  @default(true)
+  directMessaging       Boolean  @default(false)
+  searchRestrictions    Boolean  @default(true)
+  dailyScreenTimeLimit  Int?
+  weeklyActivitySummary Boolean  @default(true)
+  unusualActivityAlerts Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
+}
+
+model Conversation {
+  id            String    @id @default(cuid())
+  parentId      String
+  parent        User      @relation("ParentConversations", fields: [parentId], references: [id], onDelete: Cascade)
+  tutorId       String
+  tutor         User      @relation("TutorConversations", fields: [tutorId], references: [id], onDelete: Cascade)
+  lastMessageAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  messages      Message[]
+
+  @@unique([parentId, tutorId])
+  @@index([parentId])
+  @@index([tutorId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  studentId      String?
+  student        Student?     @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  body           String
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([studentId])
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model PaymentMethod {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorizationCode String   @unique
+  cardType          String
+  last4             String
+  expMonth          String
+  expYear           String
+  bank              String?
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+}
+
+enum TransactionType {
+  BOOKING_PAYMENT
+  WALLET_TOPUP
+  CARD_VERIFICATION
+}
+
+enum PaymentSource {
+  CARD
+  WALLET
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+model Transaction {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        TransactionType
+  source      PaymentSource
+  amount      Int
+  status      TransactionStatus @default(PENDING)
+  reference   String            @unique
+  bookingId   String?
+  booking     Booking?          @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  description String
+  createdAt   DateTime          @default(now())
+
+  @@index([userId])
+  @@index([bookingId])
+}
+
+enum TutorVerificationStatus {
+  NOT_SUBMITTED
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  ACTION_REQUIRED
+  REJECTED
+}
+
+model TutorProfile {
+  id                     String                   @id @default(cuid())
+  userId                 String                   @unique
+  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  photoUrl               String?
+  professionalTitle      String?
+  bio                    String?
+  country                String?
+  city                   String?
+  languages              String[]                 @default([])
+  subjects               String[]                 @default([])
+  gradeLevels            String[]                 @default([])
+  yearsExperience        String?
+  qualification          String?
+  teachingFormats        String[]                 @default([])
+  sessionDurationMinutes Int?
+  sessionPrice           Int?
+  profileCompletedAt     DateTime?
+
+  idType                 String?
+  idFrontUrl             String?
+  idBackUrl              String?
+  institutionName        String?
+  certificateUrl         String?
+  supportingDocUrls      String[]                 @default([])
+  experienceDescription  String?
+  declarationAccurate    Boolean                  @default(false)
+  declarationMisinfo     Boolean                  @default(false)
+  declarationConsent     Boolean                  @default(false)
+  verificationStatus     TutorVerificationStatus  @default(NOT_SUBMITTED)
+  submittedAt            DateTime?
+  reviewedAt             DateTime?
+  rejectionReason        String?
+
+  payoutBankCode         String?
+  payoutBankName         String?
+  payoutAccountNumber    String?
+  payoutAccountName      String?
+  payoutVerifiedAt       DateTime?
+
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  verificationEvents     TutorVerificationEvent[]
+}
+
+model TutorVerificationEvent {
+  id          String                  @id @default(cuid())
+  tutorProfileId String
+  tutorProfile TutorProfile           @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+  reviewerId  String
+  reviewer    User                    @relation("VerificationReviewer", fields: [reviewerId], references: [id])
+  status      TutorVerificationStatus
+  reason      String?
+  snapshot    Json?
+  createdAt   DateTime                @default(now())
+
+  @@index([tutorProfileId, createdAt])
+  @@index([reviewerId])
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum DisputePriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Dispute {
+  id          String          @id @default(cuid())
+  reference   String          @unique
+  bookingId   String
+  booking     Booking         @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  openedById  String
+  openedBy    User            @relation("DisputeOpenedBy", fields: [openedById], references: [id])
+  parentId    String
+  parent      User            @relation("DisputeParent", fields: [parentId], references: [id])
+  tutorId     String
+  tutor       User            @relation("DisputeTutor", fields: [tutorId], references: [id])
+  reason      String
+  description String
+  status      DisputeStatus   @default(OPEN)
+  priority    DisputePriority @default(MEDIUM)
+  resolution  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  events      DisputeEvent[]
+
+  @@index([status, createdAt])
+  @@index([bookingId])
+  @@index([parentId])
+  @@index([tutorId])
+  @@index([openedById])
+}
+
+model DisputeEvent {
+  id        String   @id @default(cuid())
+  disputeId String
+  dispute   Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  actorId   String?
+  action    String
+  note      String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([disputeId, createdAt])
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SupportPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model SupportTicket {
+  id          String              @id @default(cuid())
+  reference   String              @unique
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject     String
+  category    String
+  status      SupportTicketStatus @default(OPEN)
+  priority    SupportPriority     @default(MEDIUM)
+  bookingId   String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  messages    SupportMessage[]
+
+  @@index([status, updatedAt])
+  @@index([userId])
+}
+
+model SupportMessage {
+  id          String        @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id])
+  body        String
+  internal    Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([authorId])
+}
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  admin       User     @relation("AdminActor", fields: [adminId], references: [id])
+  action      String
+  entityType  String
+  entityId    String
+  reason      String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model AdminSetting {
+  key       String   @id
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}
+
+model TutorAvailability {
+  id        String   @id @default(cuid())
+  tutorId   String
+  tutor     User     @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+
+  @@index([tutorId])
+}
+
+model TutorStudentProgress {
+  id              String   @id @default(cuid())
+  tutorId         String
+  tutor           User     @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  progressPercent Int      @default(0)
+  note            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tutorId, studentId])
+  @@index([tutorId])
+  @@index([studentId])
+}
