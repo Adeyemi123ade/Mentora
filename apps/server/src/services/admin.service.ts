@@ -2,7 +2,6 @@ import type { AdminPendingTutorDto, AdminInviteDto } from '@mentora/shared';
 import prisma from '../db.js';
 import { AppError } from '../lib/AppError.js';
 import { supabaseAdmin } from '../lib/supabase.js';
-import { env } from '../env.js';
 import * as storageService from './storage.service.js';
 import { sendAdminInviteEmail } from './email.service.js';
 
@@ -123,7 +122,7 @@ export async function inviteAdmin(inviterId: string, inviterName: string, email:
   const { data, error } = await supabaseAdmin.auth.admin.generateLink({
     type: 'invite',
     email,
-    options: { redirectTo: `${env.CLIENT_URL}/accept-invite` },
+    options: { redirectTo: `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/accept-invite` },
   });
 
   if (error || !data?.properties?.action_link) {

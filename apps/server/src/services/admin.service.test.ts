@@ -16,6 +16,12 @@ vi.mock('../lib/supabase.js', () => supabaseMock);
 const emailMock = vi.hoisted(() => ({ sendAdminInviteEmail: vi.fn() }));
 vi.mock('./email.service.js', () => emailMock);
 
+// admin.service.ts also imports storage.service.js (for listPendingTutors'
+// document signed URLs, not exercised below) — mock it so the real module
+// never loads. It imports env.js directly, which throws at import time in
+// any environment without DATABASE_URL/SUPABASE_* configured (e.g. CI).
+vi.mock('./storage.service.js', () => ({ createDocumentSignedUrl: vi.fn() }));
+
 import { inviteAdmin, listInvites, revokeInvite } from './admin.service.js';
 
 const inviter = { id: 'admin-1', name: 'Ada Admin' };
