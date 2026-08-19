@@ -575,6 +575,17 @@ export type AdminPendingTutorDto = {
   submittedAt: string | null;
 };
 
+export type AdminInviteStatus = 'PENDING' | 'ACCEPTED' | 'REVOKED';
+
+export type AdminInviteDto = {
+  id: string;
+  email: string;
+  status: AdminInviteStatus;
+  invitedByName: string;
+  createdAt: string;
+  acceptedAt: string | null;
+};
+
 export type PublicTutorDto = {
   id: string;
   name: string;

@@ -27,6 +27,28 @@ function formatMinutesToLabel(totalMinutes: number): string {
   return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
+// Canonical wire/storage format for times across the API (TutorAvailability,
+// Booking.startTime/endTime) is 24-hour "HH:MM" — this must match
+// apps/server/src/validation/booking.schemas.ts exactly.
+function formatMinutesTo24h(totalMinutes: number): string {
+  const hours24 = Math.floor(totalMinutes / 60) % 24;
+  const minutes = totalMinutes % 60;
+  return `${hours24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+// Canonical wire format for dates is a plain "YYYY-MM-DD" calendar date
+// (see booking.schemas.ts `date: z.string().date()`). Using Date#toISOString()
+// here would both (a) send a full datetime string that fails that schema, and
+// (b) shift the date backward a day for any positive-UTC-offset timezone
+// (including WAT, this platform's primary timezone) because it converts the
+// local-midnight Date to UTC before slicing.
+export function formatDateForApi(date: Date): string {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function isSameDate(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
@@ -46,7 +68,10 @@ export function isDateAvailable(tutor: Tutor, date: Date): boolean {
   return Boolean(entry?.hours);
 }
 
-export type TimeSlot = { start: string; end: string };
+// `start`/`end` are human-readable display labels (e.g. "9:00 AM"). `startValue`/
+// `endValue` are the canonical 24-hour "HH:MM" values that must be sent to the API —
+// never send `start`/`end` in a booking request.
+export type TimeSlot = { start: string; end: string; startValue: string; endValue: string };
 
 export function getTimeSlotsForDate(tutor: Tutor, date: Date): TimeSlot[] {
   const schedule = getWeeklySchedule(tutor.status);
@@ -60,7 +85,12 @@ export function getTimeSlotsForDate(tutor: Tutor, date: Date): TimeSlot[] {
 
   const slots: TimeSlot[] = [];
   for (let m = startMinutes; m + 60 <= endMinutes; m += 60) {
-    slots.push({ start: formatMinutesToLabel(m), end: formatMinutesToLabel(m + 60) });
+    slots.push({
+      start: formatMinutesToLabel(m),
+      end: formatMinutesToLabel(m + 60),
+      startValue: formatMinutesTo24h(m),
+      endValue: formatMinutesTo24h(m + 60),
+    });
   }
   return slots;
 }
@@ -89,10 +119,15 @@ export function getRealTimeSlotsForDate(slots: RealAvailabilitySlot[], date: Dat
     const startMinutes = parse24hToMinutes(slot.startTime);
     const endMinutes = parse24hToMinutes(slot.endTime);
     for (let m = startMinutes; m + 60 <= endMinutes; m += 60) {
-      result.push({ start: formatMinutesToLabel(m), end: formatMinutesToLabel(m + 60) });
+      result.push({
+        start: formatMinutesToLabel(m),
+        end: formatMinutesToLabel(m + 60),
+        startValue: formatMinutesTo24h(m),
+        endValue: formatMinutesTo24h(m + 60),
+      });
     }
   }
-  return result.sort((a, b) => parseTimeToMinutes(a.start) - parseTimeToMinutes(b.start));
+  return result.sort((a, b) => a.startValue.localeCompare(b.startValue));
 }
 
 const WEEKDAY_ORDER_MON_FIRST = [

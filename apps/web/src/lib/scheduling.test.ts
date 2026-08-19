@@ -8,6 +8,7 @@ import {
   getRealTimeSlotsForDate,
   formatRealWeeklySchedule,
   describeRealAvailability,
+  formatDateForApi,
   type RealAvailabilitySlot,
 } from './scheduling';
 
@@ -48,7 +49,7 @@ describe('getTimeSlotsForDate (static catalog)', () => {
   it('returns the full day of one-hour slots for an available weekday', () => {
     const slots = getTimeSlotsForDate(TUTOR, MONDAY);
     expect(slots).toHaveLength(12);
-    expect(slots[0]).toEqual({ start: '9:00 AM', end: '10:00 AM' });
+    expect(slots[0]).toEqual({ start: '9:00 AM', end: '10:00 AM', startValue: '09:00', endValue: '10:00' });
     expect(slots[slots.length - 1].start).toBe('8:00 PM');
   });
 
@@ -74,14 +75,33 @@ describe('getRealTimeSlotsForDate', () => {
 
   it('builds hourly slots for the matching day only', () => {
     expect(getRealTimeSlotsForDate(slots, MONDAY)).toEqual([
-      { start: '9:00 AM', end: '10:00 AM' },
-      { start: '10:00 AM', end: '11:00 AM' },
-      { start: '1:00 PM', end: '2:00 PM' },
+      { start: '9:00 AM', end: '10:00 AM', startValue: '09:00', endValue: '10:00' },
+      { start: '10:00 AM', end: '11:00 AM', startValue: '10:00', endValue: '11:00' },
+      { start: '1:00 PM', end: '2:00 PM', startValue: '13:00', endValue: '14:00' },
     ]);
   });
 
   it('returns an empty list when the day has no availability', () => {
     expect(getRealTimeSlotsForDate(slots, SUNDAY)).toHaveLength(0);
+  });
+});
+
+describe('formatDateForApi', () => {
+  it('formats using local calendar components, not UTC conversion', () => {
+    expect(formatDateForApi(new Date(2026, 7, 20))).toBe('2026-08-20');
+  });
+
+  it('zero-pads single-digit months and days', () => {
+    expect(formatDateForApi(new Date(2026, 0, 5))).toBe('2026-01-05');
+  });
+
+  it('is not shifted by a positive UTC offset at local midnight', () => {
+    // A date constructed at local midnight (as the booking calendar does) must
+    // still resolve to the same calendar day the user clicked — the historical
+    // bug used `date.toISOString().slice(0, 10)`, which rolls back a day for
+    // any timezone ahead of UTC (including WAT, UTC+1).
+    const localMidnight = new Date(2026, 7, 20, 0, 0, 0, 0);
+    expect(formatDateForApi(localMidnight)).toBe('2026-08-20');
   });
 });
 

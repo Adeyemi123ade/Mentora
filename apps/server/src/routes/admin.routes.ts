@@ -3,7 +3,7 @@ import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { rejectTutorSchema } from '../validation/admin.schemas.js';
+import { rejectTutorSchema, inviteAdminSchema } from '../validation/admin.schemas.js';
 import * as adminService from '../services/admin.service.js';
 import * as operations from '../services/adminOperations.service.js';
 import { z } from 'zod';
@@ -47,5 +47,15 @@ router.post('/support/:id/messages', validate(z.object({ body: z.object({ body: 
 router.patch('/support/:id', validate(z.object({ body: z.object({ status: z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']), priority: z.enum(['LOW', 'MEDIUM', 'HIGH']) }) })), asyncHandler(async (req, res) => { await operations.updateTicket(req.user!.id, req.params.id, req.body.status, req.body.priority); res.json({ success: true, message: 'Ticket updated' }); }));
 router.get('/settings', asyncHandler(async (_req, res) => res.json({ success: true, message: 'OK', data: { settings: await operations.getSettings() } })));
 router.put('/settings', validate(z.object({ body: z.object({ values: z.record(z.unknown()) }) })), asyncHandler(async (req, res) => { await operations.saveSettings(req.user!.id, req.body.values); res.json({ success: true, message: 'Settings saved' }); }));
+
+router.get('/invites', asyncHandler(async (_req, res) => res.json({ success: true, message: 'OK', data: { items: await adminService.listInvites() } })));
+router.post('/invites', validate(inviteAdminSchema), asyncHandler(async (req, res) => {
+  const invite = await adminService.inviteAdmin(req.user!.id, req.user!.name, req.body.email);
+  res.status(201).json({ success: true, message: 'Invite sent', data: { invite } });
+}));
+router.post('/invites/:id/revoke', asyncHandler(async (req, res) => {
+  await adminService.revokeInvite(req.user!.id, req.params.id);
+  res.json({ success: true, message: 'Invite revoked' });
+}));
 
 export default router;

@@ -45,6 +45,7 @@ model User {
   suspendedAt           DateTime?
   suspensionReason      String?
   adminActions          AdminAuditLog[]    @relation("AdminActor")
+  sentAdminInvites      AdminInvite[]      @relation("AdminInviter")
   reviewedTutorApplications TutorVerificationEvent[] @relation("VerificationReviewer")
   disputesOpened        Dispute[]          @relation("DisputeOpenedBy")
   disputesAsParent      Dispute[]          @relation("DisputeParent")
@@ -544,6 +545,25 @@ model AdminAuditLog {
 
   @@index([adminId, createdAt])
   @@index([entityType, entityId])
+}
+
+enum AdminInviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+model AdminInvite {
+  id          String            @id @default(cuid())
+  email       String            @unique
+  invitedById String
+  invitedBy   User              @relation("AdminInviter", fields: [invitedById], references: [id])
+  status      AdminInviteStatus @default(PENDING)
+  acceptedAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([status])
 }
 
 model AdminSetting {

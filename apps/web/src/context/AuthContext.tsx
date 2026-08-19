@@ -163,10 +163,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function sendPasswordResetEmail(email: string): Promise<void> {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    // Routed through the API (not supabase.auth.resetPasswordForEmail directly) so
+    // delivery goes through the app's own SMTP pipeline — see auth.service.ts.
+    await apiRequest('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
     });
-    if (error) throw error;
   }
 
   return (

@@ -1,10 +1,12 @@
-import { Prisma, type User } from '@prisma/client';
+import type { User } from '@prisma/client';
+import { randomBytes } from 'node:crypto';
 import type { UserSummary, UpdateProfilePayload, SignupPayload } from '@mentora/shared';
 import prisma from '../db.js';
 import { AppError } from '../lib/AppError.js';
 import { supabase, supabaseAdmin } from '../lib/supabase.js';
-import { sendVerificationEmail } from './email.service.js';
+import { sendVerificationEmail, sendPasswordResetEmail } from './email.service.js';
 import * as loginEventService from './loginEvent.service.js';
+import { deleteStudent } from './student.service.js';
 
 const SIGNUP_ROLE_VALUES = new Set(['PARENT', 'TUTOR']);
 
@@ -63,6 +65,11 @@ export async function syncUserFromSupabase(
         data: { supabaseUserId: supabaseUser.id, emailVerified },
       });
     } else {
+      // A pending AdminInvite is the only way a brand-new account can become ADMIN —
+      // that row is only ever created by an existing admin via adminService.inviteAdmin.
+      const pendingInvite = await prisma.adminInvite.findUnique({ where: { email } });
+      const isAcceptingAdminInvite = pendingInvite?.status === 'PENDING';
+
       user = await prisma.user.create({
         data: {
           supabaseUserId: supabaseUser.id,
@@ -70,11 +77,18 @@ export async function syncUserFromSupabase(
           name,
           // Public users may only become parents or tutors. Student identities are
           // provisioned and linked by the parent-owned student workflow.
-          role: metadataRole(supabaseUser.app_metadata) ?? 'PARENT',
+          role: isAcceptingAdminInvite ? 'ADMIN' : (metadataRole(supabaseUser.app_metadata) ?? 'PARENT'),
           photoUrl,
           emailVerified,
         },
       });
+
+      if (isAcceptingAdminInvite) {
+        await prisma.adminInvite.update({
+          where: { id: pendingInvite!.id },
+          data: { status: 'ACCEPTED', acceptedAt: new Date() },
+        });
+      }
     }
   }
 
@@ -213,31 +227,81 @@ export async function sendSignupOtp(email: string): Promise<void> {
   await sendVerificationEmail(email, data.properties.email_otp);
 }
 
+/**
+ * Generates the reset link server-side and delivers it through the API-owned
+ * SMTP configuration, matching sendSignupOtp — Supabase's own hosted email
+ * dispatch (used by the plain `supabase.auth.resetPasswordForEmail` client
+ * call) is not reliably configured for this project, which is exactly why
+ * signup already avoids it. Silently no-ops for an email with no account so
+ * the caller can't use this to enumerate registered addresses.
+ */
 export async function requestPasswordReset(email: string): Promise<void> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/reset-password`,
+  if (!supabaseAdmin) {
+    throw new AppError(503, 'Password reset is not configured on this server yet', 'ADMIN_NOT_CONFIGURED');
+  }
+
+  const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+    type: 'recovery',
+    email,
+    options: {
+      redirectTo: `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/reset-password`,
+    },
   });
-  if (error) {
+
+  if (error || !data?.properties?.email_otp) {
+    if (error && /user not found/i.test(error.message)) return;
+    console.error('[auth] Failed to generate password reset code:', error?.message ?? 'no email_otp in response');
     throw new AppError(502, 'Could not send the password reset email. Please try again.', 'RESET_EMAIL_FAILED');
   }
+
+  await sendPasswordResetEmail(email, data.properties.email_otp);
 }
 
+/**
+ * A hard delete of the User row is blocked whenever historical records other
+ * accounts or audit trails still reference it (disputes, admin actions,
+ * verification reviews, a tutor's past bookings, support correspondence —
+ * intentionally non-cascading, see docs/architecture/database-access-and-migrations.md).
+ * "Delete Account" anonymizes instead of hard-deleting so it always succeeds:
+ * personal data is scrubbed and the account is permanently disabled, while
+ * rows other people's history depends on stay intact but de-identified.
+ */
 export async function deleteAccount(userId: string, supabaseUserId: string): Promise<void> {
   if (!supabaseAdmin) {
     throw new AppError(503, 'Account deletion is not configured on this server yet', 'ADMIN_NOT_CONFIGURED');
   }
 
-  try {
-    await prisma.user.delete({ where: { id: userId } });
-  } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003') {
-      throw new AppError(409, 'This account has booking history and can’t be deleted. Contact support to close it.', 'HAS_BOOKING_HISTORY');
-    }
-    throw err;
+  const students = await prisma.student.findMany({ where: { parentId: userId } });
+  for (const student of students) {
+    await deleteStudent(userId, student.id);
   }
+
+  await prisma.savedTutor.deleteMany({ where: { OR: [{ parentId: userId }, { tutorId: userId }] } });
+  await prisma.tutorView.deleteMany({ where: { OR: [{ parentId: userId }, { tutorId: userId }] } });
+  await prisma.notification.deleteMany({ where: { userId } });
+  await prisma.userPreferences.deleteMany({ where: { userId } });
+  await prisma.paymentMethod.deleteMany({ where: { userId } });
+  await prisma.tutorAvailability.deleteMany({ where: { tutorId: userId } });
+  await prisma.tutorProfile.deleteMany({ where: { userId } });
+
+  const placeholderEmail = `deleted-${userId}-${randomBytes(4).toString('hex')}@deleted.mentora.dev`;
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      email: placeholderEmail,
+      name: 'Deleted user',
+      phone: null,
+      location: null,
+      photoUrl: null,
+      supabaseUserId: null,
+      accountStatus: 'DEACTIVATED',
+      suspendedAt: new Date(),
+      suspensionReason: 'Account deleted by user',
+    },
+  });
 
   const { error } = await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
   if (error) {
-    console.warn(`[auth] Public user ${userId} deleted but Supabase auth user cleanup failed: ${error.message}`);
+    console.warn(`[auth] Public user ${userId} anonymized but Supabase auth user cleanup failed: ${error.message}`);
   }
 }

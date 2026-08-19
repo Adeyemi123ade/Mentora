@@ -1016,8 +1016,41 @@ body,
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  /* Keep the desktop 5-column composition intact at tablet widths — scale
+     column widths/gap/type down instead of wrapping to a 3+2 layout. */
   .site-footer {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr 0.82fr 0.82fr 0.82fr 0.82fr;
+    gap: 14px;
+    padding: 40px 18px 26px;
+  }
+
+  .footer-brand-block {
+    padding-right: 0;
+  }
+
+  .footer-brand-block p {
+    font-size: 0.82rem;
+    max-width: none;
+  }
+
+  .footer-column h4 {
+    font-size: 0.88rem;
+    margin-bottom: 10px;
+  }
+
+  .footer-column ul {
+    gap: 8px;
+  }
+
+  .footer-column a,
+  .footer-column span {
+    font-size: 0.8rem;
+  }
+
+  .social-row span {
+    width: 26px;
+    height: 26px;
+    font-size: 0.85rem;
   }
 
   .auth-main form {
@@ -1148,7 +1181,7 @@ body,
 
 @media (max-width: 680px) {
   .auth-page {
-    justify-content: flex-start;
+    justify-content: safe center;
     padding: 6px;
   }
 
@@ -1490,25 +1523,29 @@ body,
     font-size: 0.68rem;
   }
 
+  /* Mobile shows all courses in a normal vertical flow instead of a
+     horizontal carousel — the arrow controls no longer apply. */
   .course-carousel-shell {
-    grid-template-columns: 28px minmax(0, 1fr) 28px;
-    gap: 5px;
+    display: block;
   }
 
   .course-carousel-btn {
-    width: 28px;
-    height: 36px;
-    border-radius: 10px;
-    font-size: 1.3rem;
+    display: none;
   }
 
   .course-grid {
-    gap: 10px;
-    padding-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    overflow-x: visible;
+    scroll-snap-type: none;
+    gap: 14px;
+    padding: 4px 2px 6px;
   }
 
   .course-card {
-    flex-basis: 78%;
+    flex: 1 1 auto;
+    width: 100%;
+    scroll-snap-align: none;
     padding: 9px 9px 11px;
     border-radius: 15px;
   }
@@ -1642,13 +1679,13 @@ body,
   }
 
   .site-footer .brand-name {
-    font-size: 0.68rem;
+    font-size: 0.72rem;
   }
 
   .footer-brand-block p {
     max-width: none;
-    font-size: 0.48rem;
-    line-height: 1.3;
+    font-size: 0.58rem;
+    line-height: 1.35;
   }
 
   .social-row {
@@ -1668,20 +1705,20 @@ body,
 
   .footer-column h4 {
     margin-bottom: 6px;
-    font-size: 0.58rem;
-    line-height: 1.15;
+    font-size: 0.66rem;
+    line-height: 1.2;
   }
 
   .footer-column ul {
-    gap: 5px;
+    gap: 6px;
   }
 
   .footer-column a,
   .footer-column span {
     display: block;
     overflow-wrap: anywhere;
-    font-size: 0.5rem;
-    line-height: 1.25;
+    font-size: 0.6rem;
+    line-height: 1.3;
   }
 
   .copyright {
@@ -1716,8 +1753,9 @@ body,
 }
 
 /* Auth (login / create account) screen — standalone, no site header or footer.
-   Colors/shadows below are scoped to the auth flow and follow the Mentora UI
-   Design System exactly, independent of the app-wide light/dark theme. */
+   Colors/shadows below follow the Mentora UI Design System's light palette and
+   are overridden for dark mode immediately below — every auth component reads
+   these as var(--...), so the two token blocks are the only theme-aware part. */
 .auth-page {
   --primary: #2563eb;
   --primary-dark: #1d4ed8;
@@ -1737,6 +1775,27 @@ body,
   --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05);
   --shadow-md: 0 4px 12px rgba(17, 24, 39, 0.08);
   --shadow-lg: 0 10px 24px rgba(17, 24, 39, 0.1);
+}
+
+:root[data-theme='dark'] .auth-page {
+  --primary: #4f8dff;
+  --primary-dark: #2f66d8;
+  --primary-soft: rgba(79, 141, 255, 0.16);
+  --secondary: #22d3ac;
+  --accent: #f59e0b;
+  --success: #22d3ac;
+  --warning: #f59e0b;
+  --danger: #f87171;
+  --bg: #0b0f14;
+  --card: #131a22;
+  --input-bg: #182028;
+  --text: #eef2f6;
+  --muted: #97a1ad;
+  --line: rgba(255, 255, 255, 0.09);
+  --surface-translucent: rgba(28, 36, 46, 0.82);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.5);
 }
 
 .auth-page {
@@ -4046,15 +4105,6 @@ img.dash-tutor-avatar {
 
   .dash-topbar {
     padding: 12px 16px;
-  }
-
-  .dash-welcome {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .dash-welcome-visual {
-    display: none;
   }
 
   .dash-quick-actions-grid {
@@ -11583,6 +11633,14 @@ img.settings-account-avatar,span.settings-account-avatar { width:116px; height:1
 
 .onboarding-page .auth-shell {
   grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  /* This page renders .onboarding-topbar above the shell, which the shell's
+     inherited max-height (calc(100dvh - Npx), sized for auth pages with no
+     sibling above them) doesn't leave room for — pinning the shell to nearly
+     the full viewport pushed the bottom of a long form (e.g. the submit
+     button) out of reach behind a second, easy-to-miss inner scrollbar. Let
+     the shell size to its content and rely on ordinary page scroll instead. */
+  max-height: none;
+  overflow-y: visible;
 }
 
 .onboarding-page .auth-side {
@@ -11783,40 +11841,34 @@ img.settings-account-avatar,span.settings-account-avatar { width:116px; height:1
     height: 36px;
   }
 
+  /* Same flex/wrap composition as desktop (.dash-welcome at L3058) — just
+     scaled down, not restructured into a fixed row grid. */
   .dash-welcome {
-    display: grid;
-    grid-template-columns: 92px minmax(0, 1fr);
-    align-items: start;
-    gap: 18px;
-    padding: 22px;
+    gap: 14px;
+    padding: 20px;
   }
 
   .dash-welcome-visual {
-    display: flex;
-    width: 92px;
-    gap: 9px;
+    width: auto;
+    gap: 8px;
   }
 
   .dash-student-photo {
-    width: 88px;
-    height: 88px;
+    width: 64px;
+    height: 64px;
   }
 
   .dash-hero-avatar {
-    font-size: 1.4rem;
+    font-size: 1.1rem;
   }
 
   .dash-students-row-item {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
   }
 
   .dash-welcome-copy h1 {
     font-size: 1.35rem;
-  }
-
-  .dash-welcome-actions {
-    grid-column: 1 / -1;
   }
 
   .onboarding-page {
@@ -11846,13 +11898,13 @@ img.settings-account-avatar,span.settings-account-avatar { width:116px; height:1
 }
 
 @media (max-width: 460px) {
-  .dash-welcome {
-    grid-template-columns: 1fr;
+  .dash-student-photo {
+    width: 52px;
+    height: 52px;
   }
 
-  .dash-welcome-visual {
-    width: 100%;
-    align-items: flex-start;
+  .dash-hero-avatar {
+    font-size: 0.95rem;
   }
 
   .onboarding-page .interest-grid {
@@ -12150,6 +12202,15 @@ img.settings-account-avatar,span.settings-account-avatar { width:116px; height:1
   max-width: 940px;
   border-radius: var(--app-form-radius);
   box-shadow: 0 18px 48px rgba(20, 45, 90, 0.1);
+  /* .auth-shell is height-capped (max-height: calc(100dvh - 24px), set
+     earlier/unconditionally) so its rounded corners can clip cleanly via
+     overflow:hidden on the base rule — but that same overflow:hidden was
+     silently swallowing any content taller than the cap at every viewport
+     width except <=680px, where a separate rule happened to restore
+     overflow-y:auto. Tall forms (e.g. the OTP + password + criteria +
+     confirm-password reset screen) were unreachable below that point on
+     tablet/small-desktop widths. Restore scrollability unconditionally here. */
+  overflow-y: auto;
 }
 
 .auth-main form {
@@ -12768,7 +12829,7 @@ img.settings-account-avatar,span.settings-account-avatar { width:116px; height:1
     max-width: none;
     box-sizing: border-box;
     min-height: 100dvh;
-    justify-content: flex-start;
+    justify-content: safe center;
     padding: 6px;
   }
 

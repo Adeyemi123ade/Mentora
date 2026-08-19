@@ -507,7 +507,10 @@ function AuthPage() {
     } catch (err) {
       const message = readableAuthError(err, 'We could not sign you in. Please try again.');
       if (message.toLowerCase().includes('invalid login credentials')) {
-        setLoginError("We couldn't sign you in with those details. Check your email and password, or create an account if you're new to Mentora.");
+        // This also fires for a returning user whose account only has a Google
+        // credential (no password was ever set) — point them at both working
+        // paths instead of implying they might not have an account at all.
+        setLoginError("We couldn't sign you in with those details. If you originally signed up with Google, use \"Sign in with Google\" below. Otherwise, double-check your email and password, or reset your password to set one.");
       } else if (message.toLowerCase().includes('email not confirmed')) {
         navigate(`/verify?email=${encodeURIComponent(email)}`);
       } else {
@@ -973,22 +976,33 @@ function OAuthCallbackPage() {
 
 function ForgotPasswordPage() {
   const { sendPasswordResetEmail } = useAuth();
-  const [email, setEmail] = useState('');
+  const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setError(null);
+
+    // Read straight from the form on submit — this field is intentionally
+    // uncontrolled (IconInputField has no `value` prop), so a separate `email`
+    // state variable here would never actually reflect what was typed.
+    const form = new FormData(e.currentTarget);
+    const email = String(form.get('email') ?? '').trim();
+
     if (isBlank(email)) {
       setError('Please enter your email address.');
       return;
     }
+    if (!isValidEmail(email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await sendPasswordResetEmail(email.trim());
-      setSent(true);
+      await sendPasswordResetEmail(email);
+      navigate(`/reset-password?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
@@ -1005,11 +1019,11 @@ function ForgotPasswordPage() {
             <span>Mentora</span>
           </div>
           <h1>Reset your<br /><span className="accent">password</span></h1>
-          <p>Enter the email address linked to your account and we'll send you a secure link to create a new password.</p>
+          <p>Enter the email address linked to your account and we'll send you a 6-digit code to reset your password.</p>
 
           <div className="verify-tip">
             <span className="verify-tip-icon"><ShieldCheckIcon /></span>
-            <span>The reset link is valid for a limited time and can only be used once.</span>
+            <span>The code is valid for a limited time and can only be used once.</span>
           </div>
 
           <div className="auth-side-footer">
@@ -1018,34 +1032,21 @@ function ForgotPasswordPage() {
         </div>
 
         <div className="auth-main">
-          {sent ? (
-            <div className="verify-form">
-              <div className="verify-header">
-                <span className="verify-icon-circle success"><MailIcon /></span>
-                <div>
-                  <h2>Check your inbox</h2>
-                  <p>If an account exists for <strong>{email}</strong>, a password reset link is on its way.</p>
-                </div>
-              </div>
-              <Link to="/login" className="btn btn-primary full">Back to sign in</Link>
-            </div>
-          ) : (
-            <form className="login-form" onSubmit={handleSubmit}>
-              <h2>Forgot your password?</h2>
-              <p>No worries — we'll help you get back in.</p>
+          <form className="login-form" onSubmit={handleSubmit}>
+            <h2>Forgot your password?</h2>
+            <p>No worries — we'll help you get back in.</p>
 
-              <IconInputField icon={<MailIcon className="input-icon" />} label="Email address" name="email" type="email" placeholder="Enter your email address" required />
+            <IconInputField icon={<MailIcon className="input-icon" />} label="Email address" name="email" type="email" placeholder="Enter your email address" required />
 
-              {error && <p className="form-error" role="alert">{error}</p>}
+            {error && <p className="form-error" role="alert">{error}</p>}
 
-              <button className="btn btn-primary full" type="submit" disabled={submitting}>
-                {submitting && <span className="spinner" aria-hidden="true" />}
-                {submitting ? 'Sending link…' : 'Send reset link'}
-              </button>
+            <button className="btn btn-primary full" type="submit" disabled={submitting}>
+              {submitting && <span className="spinner" aria-hidden="true" />}
+              {submitting ? 'Sending code…' : 'Send reset code'}
+            </button>
 
-              <p className="auth-switch">Remembered your password? <Link to="/login" className="link-btn">Sign in</Link></p>
-            </form>
-          )}
+            <p className="auth-switch">Remembered your password? <Link to="/login" className="link-btn">Sign in</Link></p>
+          </form>
         </div>
       </div>
     </main>
@@ -1053,27 +1054,44 @@ function ForgotPasswordPage() {
 }
 
 function ResetPasswordPage() {
-  const { user, refreshUser } = useAuth();
+  const { sendPasswordResetEmail } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [email] = useState(searchParams.get('email') ?? '');
+  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
   useEffect(() => {
-    if (!user) {
-      void refreshUser();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  function handleCodeChange(value: string) {
+    setCode(value.replace(/\D/g, '').slice(0, 6));
+  }
 
   async function handleSubmit(e: any) {
     e.preventDefault();
     setError(null);
 
+    if (!email) {
+      setError('We need your email address. Please go back and request a new reset code.');
+      return;
+    }
+    if (!/^\d{6}$/.test(code)) {
+      setError('Please enter the 6-digit code from your email.');
+      return;
+    }
     if (!passwordMeetsCriteria(password)) {
       setError('Password must be at least 8 characters and include an uppercase letter, a lowercase letter, and a special character.');
       return;
@@ -1085,14 +1103,38 @@ function ResetPasswordPage() {
 
     setSubmitting(true);
     try {
+      const { error: verifyError } = await supabase.auth.verifyOtp({ email, token: code, type: 'recovery' });
+      if (verifyError) throw verifyError;
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
       await supabase.auth.signOut();
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not reset your password. Please try again.');
+      const message = err instanceof Error ? err.message : '';
+      if (/expired/i.test(message)) {
+        setError('That code has expired. Request a new one below.');
+      } else if (/invalid|incorrect|otp|not found|token/i.test(message)) {
+        setError('That code is incorrect. Check your inbox and try again, or request a new code.');
+      } else {
+        setError(message || 'Could not reset your password. Please try again.');
+      }
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function resendCode() {
+    if (!email || resending || cooldown > 0) return;
+    setResending(true);
+    setError(null);
+    try {
+      await sendPasswordResetEmail(email);
+      setResent(true);
+      setCooldown(30);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resend the code. Please try again.');
+    } finally {
+      setResending(false);
     }
   }
 
@@ -1127,25 +1169,160 @@ function ResetPasswordPage() {
       <div className="auth-shell">
         <div className="auth-side">
           <div className="auth-side-brand"><BrandMark /><span>Mentora</span></div>
-          <h1>Choose a new<br /><span className="accent">password</span></h1>
-          <p>Pick a strong password you haven't used before. Aim for at least 8 characters with a mix of letters and symbols.</p>
+          <h1>Enter your<br /><span className="accent">reset code</span></h1>
+          <p>We've emailed a 6-digit code to <strong>{email || 'your email'}</strong>. Enter it below along with your new password.</p>
+
+          <div className="verify-tip">
+            <span className="verify-tip-icon"><ShieldCheckIcon /></span>
+            <span>This helps us confirm it's really you before changing your password.</span>
+          </div>
+
+          <div className="auth-side-footer">
+            <div className="auth-side-copyright">© 2026 Mentora. All rights reserved.</div>
+          </div>
         </div>
 
         <div className="auth-main">
           <form className="login-form" onSubmit={handleSubmit}>
             <h2>Reset your password</h2>
-            <p>Enter a new password for your account.</p>
+            <p>Enter the code we emailed you and choose a new password.</p>
+
+            {!email && (
+              <p className="form-error" role="alert">
+                We couldn't find your email for this reset request. <Link to="/forgot-password">Start over</Link> to get a new code.
+              </p>
+            )}
+
+            {email && (
+              <div className="email-badge">
+                <MailIcon className="input-icon" />
+                <span>{email}</span>
+                <span className="pending-tag">Pending</span>
+              </div>
+            )}
+
+            <label className={`field ${error && !passwordMismatch ? 'field-invalid' : ''}`}>
+              <span>Reset code <span className="req" aria-hidden="true">*</span></span>
+              <input
+                className="otp-input"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="000000"
+                value={code}
+                onChange={(e) => handleCodeChange(e.target.value)}
+                disabled={submitting}
+                aria-invalid={Boolean(error)}
+              />
+            </label>
 
             <PasswordField label="New password" name="password" placeholder="Create a new password" required minLength={8} value={password} onChange={setPassword} />
             <PasswordCriteria password={password} />
             <PasswordStrengthMeter password={password} />
             <PasswordField label="Confirm new password" name="confirmPassword" placeholder="Confirm your new password" required minLength={8} value={confirmPassword} onChange={setConfirmPassword} error={passwordMismatch ? 'Passwords do not match' : undefined} />
 
-            {error && !passwordMismatch && !error.includes('match') && <p className="form-error" role="alert">{error}</p>}
+            {resent && <p className="form-success" role="status">A new code is on its way. Please check your inbox.</p>}
+            {error && !passwordMismatch && <p className="form-error" role="alert">{error}</p>}
+
+            <button className="btn btn-primary full" type="submit" disabled={submitting}>
+              {submitting && <span className="spinner" aria-hidden="true" />}
+              {submitting ? 'Updating…' : 'Reset password'}
+            </button>
+
+            <div className="resend-row">
+              <button type="button" className="btn btn-secondary full" onClick={() => void resendCode()} disabled={!email || resending || cooldown > 0}>
+                {resending && <span className="spinner" aria-hidden="true" />}
+                {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function AcceptInvitePage() {
+  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+
+  useEffect(() => {
+    if (!user) {
+      void refreshUser();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleSubmit(e: any) {
+    e.preventDefault();
+    setError(null);
+
+    if (!passwordMeetsCriteria(password)) {
+      setError('Password must be at least 8 characters and include an uppercase letter, a lowercase letter, and a special character.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+      const profile = await refreshUser();
+      if (!profile) throw new Error('Your account could not be set up. Please try the invite link again.');
+      navigate(await postAuthDestination(profile), { replace: true });
+    } catch (err) {
+      setError(readableAuthError(err, 'Could not accept the invite. Please try again.'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="auth-page">
+      <div className="auth-shell">
+        <div className="auth-side">
+          <div className="auth-side-brand">
+            <BrandMark />
+            <span>Mentora</span>
+          </div>
+          <h1>You've been<br /><span className="accent">invited</span> to Mentora</h1>
+          <p>Set a password to activate your administrator account.</p>
+
+          <div className="verify-tip">
+            <span className="verify-tip-icon"><ShieldCheckIcon /></span>
+            <span>This invite link is single-use and tied to your email address.</span>
+          </div>
+
+          <div className="auth-side-footer">
+            <div className="auth-side-copyright">© 2026 Mentora. All rights reserved.</div>
+          </div>
+        </div>
+
+        <div className="auth-main">
+          <form className="login-form" onSubmit={handleSubmit}>
+            <h2>Set your password</h2>
+            <p>Choose a password to finish accepting your admin invite.</p>
+
+            <PasswordField label="Password" name="password" placeholder="Create a password" required minLength={8} value={password} onChange={setPassword} />
+            <PasswordCriteria password={password} />
+            <PasswordStrengthMeter password={password} />
+            <PasswordField label="Confirm password" name="confirmPassword" placeholder="Confirm your password" required minLength={8} value={confirmPassword} onChange={setConfirmPassword} error={passwordMismatch ? 'Passwords do not match' : undefined} />
+
+            {error && <p className="form-error" role="alert">{error}</p>}
 
             <button className="btn btn-primary full" type="submit" disabled={submitting || !user}>
               {submitting && <span className="spinner" aria-hidden="true" />}
-              {submitting ? 'Updating…' : user ? 'Update password' : 'Loading…'}
+              {submitting ? 'Setting up…' : user ? 'Activate account' : 'Loading…'}
             </button>
           </form>
         </div>
@@ -1226,6 +1403,21 @@ const SKILL_INTEREST_META: Record<SkillInterest, { label: string; icon: ReactNod
 
 const STUDENT_AGES = Array.from({ length: 11 }, (_, i) => i + 8);
 
+// Session-scoped, tied to one specific student's id — not "does this parent
+// have any student" (that broke "Add a Student" for a parent who already had
+// one: clicking it re-showed whichever student happened to come back first
+// from the API instead of a blank form for a new one).
+const ADD_STUDENT_SESSION_KEY = 'mentora:onboarding:created-student-id';
+
+function wasPageReload(): boolean {
+  try {
+    const [entry] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    return entry?.type === 'reload';
+  } catch {
+    return false;
+  }
+}
+
 function AddStudentPage() {
   const navigate = useNavigate();
   const [age, setAge] = useState('');
@@ -1238,6 +1430,24 @@ function AddStudentPage() {
   const [studentPassword, setStudentPassword] = useState('');
   const [createdStudent, setCreatedStudent] = useState<Student | null>(null);
   const [idCopied, setIdCopied] = useState(false);
+
+  useEffect(() => {
+    // "Add a Student" always means create a NEW student — this confirmation
+    // must only reappear if the user hits an actual browser refresh on the
+    // exact confirmation screen right after creating that specific student.
+    // Any ordinary navigation here (clicking "Add a Student" from the
+    // dashboard, however many students already exist) must open a blank form.
+    const lastCreatedId = sessionStorage.getItem(ADD_STUDENT_SESSION_KEY);
+    if (!lastCreatedId || !wasPageReload()) return;
+
+    apiRequest<{ students: Student[] }>('/api/students')
+      .then((res) => {
+        const match = (res.data?.students ?? []).find((s) => s.id === lastCreatedId);
+        if (match) setCreatedStudent((current) => current ?? match);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function copyStudentId() {
     if (!createdStudent) return;
@@ -1292,7 +1502,9 @@ function AddStudentPage() {
           password: studentPassword,
         }),
       });
-      setCreatedStudent(response.data?.student ?? null);
+      const student = response.data?.student ?? null;
+      setCreatedStudent(student);
+      if (student) sessionStorage.setItem(ADD_STUDENT_SESSION_KEY, student.id);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not create the student profile. Please try again.');
     } finally {
@@ -1343,7 +1555,7 @@ function AddStudentPage() {
               <p>Give this Student ID and the password you created to {createdStudent.fullName}. No administrator approval is required.</p>
               <div className="student-login-id-result"><span>Student ID</span><strong>{createdStudent.loginId}</strong><button type="button" className="btn btn-secondary" onClick={copyStudentId}>{idCopied ? 'Copied' : 'Copy ID'}</button></div>
               <p className="field-hint">For security, Mentora will not display the password again. You can reset it from My Students.</p>
-              <button type="button" className="btn btn-primary full" onClick={() => navigate('/dashboard')}>Continue to dashboard</button>
+              <button type="button" className="btn btn-primary full" onClick={() => { sessionStorage.removeItem(ADD_STUDENT_SESSION_KEY); navigate('/dashboard'); }}>Continue to dashboard</button>
             </div>
           ) : <form className="add-student-form" onSubmit={handleSubmit}>
             <div className="verify-header">
@@ -1435,7 +1647,7 @@ function AddStudentPage() {
 
             <div className="or-row">or</div>
 
-            <button type="button" className="btn btn-secondary full google-btn" onClick={() => navigate('/dashboard')}>
+            <button type="button" className="btn btn-secondary full google-btn" onClick={() => { sessionStorage.removeItem(ADD_STUDENT_SESSION_KEY); navigate('/dashboard'); }}>
               <EyeIcon /> Skip for now
             </button>
 
@@ -1514,6 +1726,7 @@ function App() {
         <Route path="/verify" element={<VerifyPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/accept-invite" element={<AcceptInvitePage />} />
         <Route path="/terms" element={<LegalHelpPage kind="terms" />} />
         <Route path="/privacy" element={<LegalHelpPage kind="privacy" />} />
         <Route path="/help/faq" element={<LegalHelpPage kind="faq" />} />
