@@ -29,10 +29,16 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
+// Matches localhost/127.0.0.1 plus RFC1918 private LAN ranges (10.x, 172.16-31.x,
+// 192.168.x) — dev-only, so testers on the same WiFi (e.g. http://192.168.1.104:5173)
+// can reach the API from their own phone/laptop, not just the machine running it.
+const DEV_ORIGIN_PATTERN =
+  /^http:\/\/(localhost|127\.0\.0\.1|10(?:\.\d{1,3}){3}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|192\.168(?:\.\d{1,3}){2}):\d+$/;
+
 function isAllowedOrigin(origin: string | undefined): boolean {
   if (!origin || origin === env.CLIENT_URL) return true;
   if (env.NODE_ENV !== 'production') {
-    return /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+    return DEV_ORIGIN_PATTERN.test(origin);
   }
   return false;
 }
