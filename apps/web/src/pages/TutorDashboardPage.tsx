@@ -39,6 +39,8 @@ import {
   ChevronLeftIcon,
   EditIcon,
   LightbulbIcon,
+  MenuIcon,
+  XIcon,
 } from '../components/Icons';
 
 type NavItem = { label: string; icon: (p: { className?: string }) => JSX.Element; path: string; badge?: number };
@@ -72,6 +74,7 @@ export function TutorDashboardShell({ children }: { children: ReactNode }) {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [strength, setStrength] = useState<ProfileStrength | null>(null);
   const [referralOpen, setReferralOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (user && user.role !== 'TUTOR') {
@@ -119,7 +122,13 @@ export function TutorDashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="tdash-layout">
-      <aside className="tdash-sidebar">
+      {sidebarOpen && <div className="tdash-sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />}
+
+      <aside className={sidebarOpen ? 'tdash-sidebar open' : 'tdash-sidebar'}>
+        <button type="button" className="tdash-sidebar-close" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
+          <XIcon />
+        </button>
+
         <Link to="/tutor/profile" className="tdash-profile-card">
           <Avatar name={user?.name ?? ''} photoUrl={user?.photoUrl} className="tdash-profile-avatar" />
           <div className="tdash-profile-info">
@@ -135,7 +144,7 @@ export function TutorDashboardShell({ children }: { children: ReactNode }) {
 
         {isSettingsRoute ? (
           <nav className="tdash-nav" aria-label="Settings navigation">
-            <Link to="/tutor" className="tdash-nav-link tdash-nav-back">
+            <Link to="/tutor" className="tdash-nav-link tdash-nav-back" onClick={() => setSidebarOpen(false)}>
               <ChevronLeftIcon className="tdash-nav-back-icon" /> <span>Back to Dashboard</span>
             </Link>
             {TUTOR_SETTINGS_NAV.map((item) => {
@@ -146,6 +155,7 @@ export function TutorDashboardShell({ children }: { children: ReactNode }) {
                   key={item.id}
                   to={`/tutor/settings?section=${item.id}`}
                   className={active ? 'tdash-nav-link active' : 'tdash-nav-link'}
+                  onClick={() => setSidebarOpen(false)}
                 >
                   <Icon /> <span>{item.title}</span>
                 </Link>
@@ -158,7 +168,7 @@ export function TutorDashboardShell({ children }: { children: ReactNode }) {
               const Icon = item.icon;
               const active = location.pathname === item.path;
               return (
-                <Link key={item.path} to={item.path} className={active ? 'tdash-nav-link active' : 'tdash-nav-link'}>
+                <Link key={item.path} to={item.path} className={active ? 'tdash-nav-link active' : 'tdash-nav-link'} onClick={() => setSidebarOpen(false)}>
                   <Icon /> <span>{item.label}</span>
                   {item.badge ? <span className="dash-nav-badge">{item.badge}</span> : null}
                 </Link>
@@ -191,6 +201,10 @@ export function TutorDashboardShell({ children }: { children: ReactNode }) {
 
       <div className="tdash-content-col">
         <header className="tdash-topbar">
+          <button type="button" className="tdash-menu-toggle" aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
+            <MenuIcon />
+          </button>
+
           <Link to="/tutor" className="tdash-topbar-brand">
             <img src={mentoraLogo} alt="" aria-hidden="true" className="brand-logo-img" />
             <span>Mentora</span>

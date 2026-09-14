@@ -1,8 +1,8 @@
 :root {
   color-scheme: light;
   --bg: #edf3f2;
-  --panel: #f4f7f6;
-  --card: #f9fafb;
+  --panel: #d5e8e0;
+  --card: #e3efe9;
   --primary: #1c5ce5;
   --primary-dark: #0f44c8;
   --primary-soft: #e8f0ff;
@@ -9668,6 +9668,47 @@ img.tutor-onb-illustration {
   /* No fixed height/overflow here on purpose — see .dash-sidebar for why. */
 }
 
+.tdash-sidebar-close {
+  display: none;
+  align-self: flex-end;
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tdash-sidebar-close:hover {
+  background: var(--primary-soft);
+  color: var(--text);
+}
+
+.tdash-sidebar-backdrop {
+  display: none;
+}
+
+.tdash-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text);
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tdash-menu-toggle:hover {
+  background: var(--primary-soft);
+}
+
 .tdash-profile-card {
   display: flex;
   align-items: center;
@@ -10577,10 +10618,37 @@ span.tdash-topbar-avatar {
   }
 
   .tdash-sidebar {
-    position: static;
-    height: auto;
-    flex-direction: row;
-    flex-wrap: wrap;
+    position: fixed;
+    left: -280px;
+    top: 0;
+    z-index: 20;
+    width: 260px;
+    height: 100vh;
+    transition: left 0.2s ease;
+  }
+
+  .tdash-sidebar.open {
+    left: 0;
+  }
+
+  .tdash-sidebar-close {
+    display: flex;
+  }
+
+  .tdash-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 8, 13, 0.5);
+    z-index: 19;
+  }
+
+  .tdash-menu-toggle {
+    display: flex;
+  }
+
+  .tdash-topbar-brand span {
+    display: none;
   }
 
   .tdash-home,
@@ -12242,20 +12310,16 @@ img.settings-account-avatar,span.settings-account-avatar { width:116px; height:1
   padding-bottom: max(22px, env(safe-area-inset-bottom));
 }
 
-.admin-sidebar {
-  position: sticky;
-  top: 88px;
-  height: calc(100vh - 88px);
-  height: calc(100dvh - 88px);
-  padding-bottom: max(18px, env(safe-area-inset-bottom));
-}
-
-@media (max-width:1100px) {
-  .tdash-sidebar {
-    height: auto;
-    overflow: visible;
+@media (min-width: 801px) {
+  .admin-sidebar {
+    position: sticky;
+    top: 88px;
+    height: calc(100vh - 88px);
+    height: calc(100dvh - 88px);
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
   }
 }
+
 
 @media (max-width:800px) {
   .admin-sidebar {
