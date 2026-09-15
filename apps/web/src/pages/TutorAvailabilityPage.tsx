@@ -10,6 +10,7 @@ export function TutorAvailabilityPage() {
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('17:00');
   const [error, setError] = useState<string | null>(null);
+  const [justAdded, setJustAdded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   function load() {
@@ -23,6 +24,7 @@ export function TutorAvailabilityPage() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setJustAdded(false);
     setSubmitting(true);
     try {
       await apiRequest('/api/tutor/availability', {
@@ -30,8 +32,16 @@ export function TutorAvailabilityPage() {
         body: JSON.stringify({ dayOfWeek: Number(dayOfWeek), startTime, endTime }),
       });
       load();
+      setJustAdded(true);
+      // Move on to the next day by default so re-clicking Add without changing the
+      // form doesn't silently resubmit the exact same day/time and look like a bug.
+      setDayOfWeek((d) => String((Number(d) + 1) % 7));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not add this time slot.');
+      if (err instanceof ApiError && err.code === 'AVAILABILITY_OVERLAP') {
+        setError(`This time overlaps with an existing slot on ${WEEKDAY_LABELS[Number(dayOfWeek)]}. Choose a different day or time.`);
+      } else {
+        setError(err instanceof ApiError ? err.message : 'Could not add this time slot.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -76,6 +86,7 @@ export function TutorAvailabilityPage() {
           <button type="submit" className="btn btn-primary" disabled={submitting}><PlusIcon /> Add</button>
         </form>
         {error && <p className="photo-uploader-error">{error}</p>}
+        {!error && justAdded && <p className="form-success">Time slot added. Pick another day or time to add more.</p>}
       </section>
 
       <section className="dash-card">

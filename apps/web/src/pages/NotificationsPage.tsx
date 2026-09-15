@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Notification } from '@mentora/shared';
-import { apiRequest } from '../lib/api';
+import { useNotifications } from '../context/NotificationsContext';
 import { BellIcon, CheckIcon, ChevronLeftIcon } from '../components/Icons';
 
 function formatRelativeTime(iso: string): string {
@@ -16,34 +14,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 export function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[] | null>(null);
-
-  useEffect(() => {
-    apiRequest<{ notifications: Notification[] }>('/api/notifications')
-      .then((res) => setNotifications(res.data?.notifications ?? []))
-      .catch(() => setNotifications([]));
-  }, []);
-
-  async function markRead(id: string) {
-    setNotifications((prev) => prev?.map((n) => (n.id === id ? { ...n, readAt: n.readAt ?? new Date().toISOString() } : n)) ?? prev);
-    try {
-      await apiRequest(`/api/notifications/${id}/read`, { method: 'POST' });
-    } catch {
-      // best-effort; local state already reflects the read action
-    }
-  }
-
-  async function markAllRead() {
-    const previous = notifications;
-    setNotifications((prev) => prev?.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })) ?? prev);
-    try {
-      await apiRequest('/api/notifications/read-all', { method: 'POST' });
-    } catch {
-      setNotifications(previous ?? null);
-    }
-  }
-
-  const unreadCount = notifications?.filter((n) => !n.readAt).length ?? 0;
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
 
   return (
     <div className="notif-page">

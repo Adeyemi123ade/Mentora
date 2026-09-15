@@ -142,6 +142,7 @@ export function DiscoveryPage() {
 
   const [draftFilters, setDraftFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [realTutors, setRealTutors] = useState<PublicTutorDto[] | null>(null);
 
   const pillsRef = useRef<HTMLDivElement>(null);
@@ -210,6 +211,7 @@ export function DiscoveryPage() {
   function applyFilters() {
     setAppliedFilters(draftFilters);
     setPage(1);
+    setFiltersOpen(false);
   }
 
   function resetFilters() {
@@ -243,6 +245,15 @@ export function DiscoveryPage() {
 
   // A tutor is selected for a child profile, never for the signed-in parent.
   const headerName = studentFirstName;
+
+  const activeFilterCount =
+    appliedFilters.tutorTypes.length +
+    appliedFilters.experience.length +
+    appliedFilters.availability.length +
+    appliedFilters.sessionTypes.length +
+    (appliedFilters.skill ? 1 : 0) +
+    (appliedFilters.language ? 1 : 0) +
+    (appliedFilters.maxPrice < 20000 ? 1 : 0);
 
   return (
     <>
@@ -342,7 +353,19 @@ export function DiscoveryPage() {
       </div>
 
       <div className="disc-layout">
-        <aside className="disc-filters">
+        <div className="disc-filters">
+          <button
+            type="button"
+            className="disc-filters-toggle"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen((v) => !v)}
+          >
+            <span><SlidersIcon /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+            <ChevronDownIcon className={filtersOpen ? 'disc-filters-chevron open' : 'disc-filters-chevron'} />
+          </button>
+
+          {filtersOpen && (
+          <div className="disc-filter-groups">
           <div className="disc-filters-heading">
             <h2>Filters</h2>
             <button type="button" onClick={resetFilters}>Reset</button>
@@ -461,10 +484,9 @@ export function DiscoveryPage() {
           </div>
 
           <button type="button" className="btn btn-primary full" onClick={applyFilters}>Apply Filters</button>
-          <button type="button" className="btn btn-secondary full disc-more-filters">
-            <SlidersIcon /> More Filters
-          </button>
-        </aside>
+          </div>
+          )}
+        </div>
 
         <div className="disc-results">
           <div className="disc-results-heading">

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import type { Student, Notification, Booking, PublicTutorDto, SavedTutor } from '@mentora/shared';
+import type { Student, Booking, PublicTutorDto, SavedTutor } from '@mentora/shared';
 import mentoraLogo from '../assets/mentora-logo.jpg';
 import { apiRequest, ApiError } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationsContext';
 import { Avatar } from '../components/Avatar';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { ReferralModal } from '../components/ReferralModal';
@@ -67,8 +68,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
   const [search, setSearch] = useState('');
-  const [unreadCount, setUnreadCount] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
@@ -86,11 +87,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    apiRequest<{ notifications: Notification[] }>('/api/notifications')
-      .then((res) => {
-        if (!cancelled) setUnreadCount((res.data?.notifications ?? []).filter((n) => !n.readAt).length);
-      })
-      .catch(() => {});
     apiRequest<{ count: number }>('/api/messages/unread-count')
       .then((res) => {
         if (!cancelled) setUnreadMessages(res.data?.count ?? 0);

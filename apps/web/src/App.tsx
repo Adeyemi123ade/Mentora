@@ -11,6 +11,8 @@ import digitalMarketingCourseImage from './assets/course-digital-marketing.jpeg'
 import { apiRequest, ApiError } from './lib/api';
 import { AuthProvider, useAuth, roleHome, postAuthDestination } from './context/AuthContext';
 import type { AppRole } from './context/AuthContext';
+import { NotificationsProvider } from './context/NotificationsContext';
+import { getReturnPath } from './lib/authRouting';
 import { supabase } from './lib/supabase';
 import { SiteFooter } from './components/SiteFooter';
 import { PasswordCriteria, passwordMeetsCriteria } from './components/PasswordCriteria';
@@ -437,6 +439,7 @@ function readableAuthError(error: unknown, fallback: string): string {
 
 function AuthPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>(() => searchParams.get('mode') === 'signup' ? 'signup' : 'login');
@@ -475,7 +478,10 @@ function AuthPage() {
     setLoginSubmitting(true);
     try {
       const user = await signIn(email, password);
-      navigate(await postAuthDestination(user));
+      // Restore the page the user was on when their session lapsed, when there is
+      // one — RequireAuth still re-checks role access on that route independently,
+      // so this can never grant access a fresh postAuthDestination() wouldn't.
+      navigate(getReturnPath(location.state) ?? (await postAuthDestination(user)));
     } catch (err) {
       const message = readableAuthError(err, 'We could not sign you in. Please try again.');
       if (message.toLowerCase().includes('invalid login credentials')) {
@@ -1389,6 +1395,7 @@ function AcceptInvitePage() {
 
 function RequireAuth({ role, children }: { role?: AppRole; children: ReactNode }) {
   const { user, initializing, hasSession, authError, refreshUser } = useAuth();
+  const location = useLocation();
 
   if (initializing) {
     return (
@@ -1409,7 +1416,7 @@ function RequireAuth({ role, children }: { role?: AppRole; children: ReactNode }
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
   if (role && user.role !== role) return <Navigate to={roleHome(user.role)} replace />;
   return <>{children}</>;
 }
@@ -1788,6 +1795,7 @@ function App() {
 
   return (
     <AuthProvider>
+      <NotificationsProvider>
       <Suspense fallback={<main className="auth-loading"><div className="spinner" aria-label="Loading page" /></main>}>
         <Routes>
         <Route path="/" element={<SiteLayout><LandingPage /></SiteLayout>} />
@@ -1838,6 +1846,7 @@ function App() {
         <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
+      </NotificationsProvider>
     </AuthProvider>
   );
 }

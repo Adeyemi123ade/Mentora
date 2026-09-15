@@ -5,6 +5,7 @@ import mentoraLogo from '../assets/mentora-logo.jpg';
 import learningBooks from '../assets/student-learning-books.png';
 import { apiRequest } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { getReturnPath } from '../lib/authRouting';
 import { Avatar } from '../components/Avatar';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { ReferralModal } from '../components/ReferralModal';
@@ -20,6 +21,7 @@ import {
 export function StudentLoginPage() {
   const { signInStudent } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +36,7 @@ export function StudentLoginPage() {
     if (!/^MEN-[A-F0-9]{8}$/i.test(loginId.trim())) { setError('Enter the Student ID provided by your parent, for example MEN-12AB34CD.'); return; }
     if (!password) { setError('Enter your student password.'); return; }
     setSubmitting(true);
-    try { const user = await signInStudent(loginId.trim().toUpperCase(), password); navigate(user.role === 'STUDENT' ? '/student' : '/login', { replace: true }); }
+    try { const user = await signInStudent(loginId.trim().toUpperCase(), password); navigate(user.role === 'STUDENT' ? (getReturnPath(location.state) ?? '/student') : '/login', { replace: true }); }
     catch (err) { setError(err instanceof Error ? err.message : 'Could not sign you in. Check your Student ID and password.'); }
     finally { setSubmitting(false); }
   }

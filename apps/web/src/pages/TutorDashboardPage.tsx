@@ -7,10 +7,10 @@ import type {
   TutorActivityItem,
   ProfileStrength,
   AvailabilitySlot,
-  Notification,
 } from '@mentora/shared';
 import { apiRequest } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationsContext';
 import { Avatar } from '../components/Avatar';
 import { Modal } from '../components/Modal';
 import { ReferralModal } from '../components/ReferralModal';
@@ -69,9 +69,9 @@ export function TutorDashboardShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { unreadCount: unreadNotifications } = useNotifications();
   const [profile, setProfile] = useState<TutorProfileDto | null>(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [strength, setStrength] = useState<ProfileStrength | null>(null);
   const [referralOpen, setReferralOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -104,9 +104,6 @@ export function TutorDashboardShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     apiRequest<{ count: number }>('/api/messages/unread-count').then((r) => setUnreadMessages(r.data?.count ?? 0)).catch(() => {});
-    apiRequest<{ notifications: Notification[] }>('/api/notifications')
-      .then((r) => setUnreadNotifications((r.data?.notifications ?? []).filter((n) => !n.readAt).length))
-      .catch(() => {});
     apiRequest<{ strength: ProfileStrength }>('/api/tutor/dashboard/profile-strength')
       .then((r) => setStrength(r.data?.strength ?? null))
       .catch(() => {});
@@ -125,9 +122,15 @@ export function TutorDashboardShell({ children }: { children: ReactNode }) {
       {sidebarOpen && <div className="tdash-sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />}
 
       <aside className={sidebarOpen ? 'tdash-sidebar open' : 'tdash-sidebar'}>
-        <button type="button" className="tdash-sidebar-close" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
-          <XIcon />
-        </button>
+        <div className="tdash-sidebar-header">
+          <Link to="/tutor" className="tdash-sidebar-brand" onClick={() => setSidebarOpen(false)}>
+            <img src={mentoraLogo} alt="" aria-hidden="true" className="brand-logo-img" />
+            <span>Mentora</span>
+          </Link>
+          <button type="button" className="tdash-sidebar-close" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
+            <XIcon />
+          </button>
+        </div>
 
         <Link to="/tutor/profile" className="tdash-profile-card">
           <Avatar name={user?.name ?? ''} photoUrl={user?.photoUrl} className="tdash-profile-avatar" />
