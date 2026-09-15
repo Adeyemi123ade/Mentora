@@ -13151,6 +13151,13 @@ img.settings-account-avatar,span.settings-account-avatar { width:116px; height:1
     margin: 10px 0 16px;
     font-size: 0.85rem;
     line-height: 1.5;
+    /* --muted reads fine on a large desktop monitor but is genuinely hard to
+       read on a phone screen at this size — switch to the dark text token. */
+    color: var(--text);
+  }
+
+  .proof-copy span {
+    color: var(--text);
   }
 
   /* The photo is now a small companion to the text, not a full section of its
